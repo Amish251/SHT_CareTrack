@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Seva Equipment Register</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@400;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1B3A3A;
+    --ink-soft:#3E5C5C;
+    --paper:#F5F1E8;
+    --paper-raised:#FFFDF8;
+    --marigold:#E08A1E;
+    --marigold-deep:#B96D0F;
+    --sage:#4C7A63;
+    --sage-deep:#365746;
+    --rust:#B4482D;
+    --slate:#7C8B8B;
+    --line:#DCD5C4;
+    --shadow: 0 1px 2px rgba(27,58,58,0.06), 0 2px 8px rgba(27,58,58,0.05);
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'IBM Plex Sans', sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3, .display{
+    font-family:'Roboto Slab', serif;
+    font-weight:700;
+    letter-spacing:-0.01em;
+  }
+  .mono{ font-family:'IBM Plex Mono', monospace; }
+
+  /* ---------- Shell ---------- */
+  .shell{
+    display:flex;
+    min-height:100vh;
+  }
+  .sidebar{
+    width:220px;
+    flex-shrink:0;
+    background:var(--ink);
+    color:var(--paper);
+    display:flex;
+    flex-direction:column;
+    padding:24px 0;
+  }
+  .brand{
+    padding:0 20px 20px 20px;
+    border-bottom:1px solid rgba(245,241,232,0.15);
+    margin-bottom:14px;
+  }
+  .brand-mark{
+    width:38px;height:38px;border-radius:50%;
+    background:var(--marigold);
+    display:flex;align-items:center;justify-content:center;
+    font-family:'IBM Plex Mono',monospace; font-weight:600; color:var(--ink);
+    font-size:15px;
+    margin-bottom:10px;
+    box-shadow: 0 0 0 3px rgba(224,138,30,0.25);
+  }
+  .brand h1{
+    font-size:17px;
+    margin:0;
+    line-height:1.25;
+    color:var(--paper);
+  }
+  .brand p{
+    margin:4px 0 0 0;
+    font-size:11.5px;
+    color:rgba(245,241,232,0.55);
+    letter-spacing:.03em;
+    text-transform:uppercase;
+  }
+  nav{ display:flex; flex-direction:column; gap:2px; padding:0 10px; }
+  nav button{
+    all:unset;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:11px 12px;
+    border-radius:6px;
+    font-size:13.5px;
+    color:rgba(245,241,232,0.75);
+    transition:background .15s, color .15s;
+  }
+  nav button .tag{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10.5px;
+    color:rgba(245,241,232,0.35);
+    width:16px;
+  }
+  nav button:hover{ background:rgba(245,241,232,0.08); color:var(--paper); }
+  nav button.active{ background:var(--marigold); color:var(--ink); font-weight:600; }
+  nav button.active .tag{ color:rgba(27,58,58,0.55); }
+
+  .sidebar-foot{
+    margin-top:auto;
+    padding:14px 20px 4px 20px;
+    font-size:10.5px;
+    color:rgba(245,241,232,0.4);
+    border-top:1px solid rgba(245,241,232,0.12);
+  }
+
+  .main{ flex:1; padding:32px 40px 60px 40px; max-width:1180px; }
+  .page-head{ margin-bottom:26px; display:flex; align-items:flex-end; justify-content:space-between; gap:20px; flex-wrap:wrap;}
+  .page-head h2{ font-size:24px; margin:0 0 4px 0; }
+  .page-head .sub{ color:var(--slate); font-size:13.5px; margin:0; }
+
+  /* ---------- Cards / tokens ---------- */
+  .grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(230px,1fr)); gap:16px; }
+  .card{
+    background:var(--paper-raised);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:18px;
+    box-shadow:var(--shadow);
+    position:relative;
+  }
+  .card h3{ font-size:16px; margin:0 0 10px 0; }
+  .stat-row{ display:flex; gap:14px; margin-top:12px; }
+  .stat{ flex:1; }
+  .stat .num{ font-family:'IBM Plex Mono',monospace; font-size:22px; font-weight:600; }
+  .stat .lbl{ font-size:10.5px; text-transform:uppercase; letter-spacing:.05em; color:var(--slate); }
+  .stat.free .num{ color:var(--sage-deep); }
+  .stat.engaged .num{ color:var(--marigold-deep); }
+
+  .token-tag{
+    position:absolute; top:14px; right:14px;
+    width:30px;height:30px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight:600;
+    color:#fff;
+  }
+  .token-tag.free{ background:var(--sage); }
+  .token-tag.engaged{ background:var(--marigold); }
+
+  /* dashed tag edge motif used on unit chips */
+  .unit-chip{
+    display:inline-flex; align-items:center; gap:6px;
+    padding:5px 10px 5px 8px;
+    border-radius:999px;
+    font-family:'IBM Plex Mono',monospace; font-size:11.5px; font-weight:500;
+    border:1px dashed var(--line);
+    background:#fff;
+    margin:3px 4px 0 0;
+  }
+  .unit-chip .dot{ width:8px;height:8px;border-radius:50%; }
+  .unit-chip.free .dot{ background:var(--sage); }
+  .unit-chip.engaged .dot{ background:var(--marigold); }
+
+  /* ---------- Forms ---------- */
+  .panel{
+    background:var(--paper-raised);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:22px 24px;
+    box-shadow:var(--shadow);
+    margin-bottom:22px;
+  }
+  .panel h3{ font-size:15px; margin:0 0 16px 0; display:flex; align-items:center; gap:8px;}
+  .field-row{ display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:14px; margin-bottom:14px; }
+  label{ display:block; font-size:11.5px; font-weight:600; text-transform:uppercase; letter-spacing:.04em; color:var(--ink-soft); margin-bottom:6px; }
+  input[type=text], input[type=number], input[type=date], input[type=tel], select, textarea{
+    width:100%;
+    padding:9px 10px;
+    border:1px solid var(--line);
+    border-radius:6px;
+    background:#fff;
+    font-family:'IBM Plex Sans',sans-serif;
+    font-size:13.5px;
+    color:var(--ink);
+  }
+  input:focus, select:focus, textarea:focus{
+    outline:2px solid var(--marigold);
+    outline-offset:1px;
+    border-color:var(--marigold);
+  }
+  .check-row{ display:flex; align-items:center; gap:8px; margin-bottom:14px; }
+  .check-row input{ width:16px; height:16px; }
+  .check-row label{ margin:0; text-transform:none; font-weight:500; font-size:13px; color:var(--ink); }
+
+  button.btn{
+    all:unset;
+    cursor:pointer;
+    padding:10px 18px;
+    border-radius:6px;
+    background:var(--marigold);
+    color:var(--ink);
+    font-weight:600;
+    font-size:13.5px;
+    transition:background .15s;
+  }
+  button.btn:hover{ background:var(--marigold-deep); color:#fff; }
+  button.btn.secondary{ background:transparent; border:1px solid var(--line); color:var(--ink-soft); }
+  button.btn.secondary:hover{ background:var(--line); color:var(--ink); }
+  button.btn.danger{ background:transparent; border:1px solid var(--rust); color:var(--rust); }
+  button.btn.danger:hover{ background:var(--rust); color:#fff; }
+  button.btn.small{ padding:6px 12px; font-size:12px; }
+
+  /* ---------- Tables ---------- */
+  table{ width:100%; border-collapse:collapse; font-size:13px; }
+  thead th{
+    text-align:left; font-size:10.5px; text-transform:uppercase; letter-spacing:.04em;
+    color:var(--slate); padding:8px 10px; border-bottom:1px solid var(--line);
+  }
+  tbody td{ padding:10px 10px; border-bottom:1px solid var(--line); vertical-align:middle; }
+  tbody tr:hover{ background:rgba(224,138,30,0.05); }
+  .pill{
+    display:inline-block; padding:3px 9px; border-radius:999px; font-size:11px; font-weight:600;
+  }
+  .pill.active{ background:rgba(224,138,30,0.15); color:var(--marigold-deep); }
+  .pill.returned{ background:rgba(76,122,99,0.15); color:var(--sage-deep); }
+  .pill.yes{ background:rgba(76,122,99,0.15); color:var(--sage-deep); }
+  .pill.no{ background:rgba(180,72,45,0.12); color:var(--rust); }
+
+  .empty{
+    text-align:center; padding:50px 20px; color:var(--slate);
+    border:1px dashed var(--line); border-radius:10px; background:var(--paper-raised);
+  }
+  .empty .display{ font-size:16px; color:var(--ink); margin-bottom:6px; }
+
+  .toolbar{ display:flex; gap:10px; margin-bottom:16px; flex-wrap:wrap; align-items:center; }
+  .toolbar input, .toolbar select{ width:auto; min-width:170px; }
+
+  .toast{
+    position:fixed; bottom:22px; right:22px;
+    background:var(--ink); color:var(--paper);
+    padding:12px 18px; border-radius:8px; font-size:13px;
+    box-shadow:0 6px 20px rgba(0,0,0,0.25);
+    opacity:0; transform:translateY(8px);
+    transition:opacity .2s, transform .2s;
+    pointer-events:none;
+    z-index:50;
+  }
+  .toast.show{ opacity:1; transform:translateY(0); }
+
+  .sr-only{ position:absolute; width:1px;height:1px; overflow:hidden; clip:rect(0,0,0,0); }
+
+  @media (max-width:800px){
+    .shell{ flex-direction:column; }
+    .sidebar{ width:100%; flex-direction:row; overflow-x:auto; padding:14px; align-items:center; }
+    .brand{ display:none; }
+    nav{ flex-direction:row; padding:0; }
+    .main{ padding:20px; }
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">॥</div>
+      <h1>Seva Equipment Register</h1>
+      <p>Token-based lending</p>
+    </div>
+    <nav id="nav">
+      <button data-tab="dashboard" class="active"><span class="tag">01</span>Dashboard</button>
+      <button data-tab="equipment"><span class="tag">02</span>Equipment Types</button>
+      <button data-tab="issue"><span class="tag">03</span>Issue Equipment</button>
+      <button data-tab="active"><span class="tag">04</span>Active Loans</button>
+      <button data-tab="history"><span class="tag">05</span>Full History</button>
+    </nav>
+    <div class="sidebar-foot">Data is shared — visible to everyone using this register.</div>
+  </aside>
+
+  <main class="main">
+    <div id="dashboard" class="tab-page"></div>
+    <div id="equipment" class="tab-page" style="display:none;"></div>
+    <div id="issue" class="tab-page" style="display:none;"></div>
+    <div id="active" class="tab-page" style="display:none;"></div>
+    <div id="history" class="tab-page" style="display:none;"></div>
+  </main>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const STORAGE_KEY = 'trust-equipment-data';
+let DATA = { types: [], units: [], allocations: [] };
+let dataLoaded = false;
+
+function uid(prefix){ return prefix + '_' + Math.random().toString(36).slice(2,9); }
+function todayStr(){ return new Date().toISOString().slice(0,10); }
+function fmtDate(d){ if(!d) return '—'; const dt=new Date(d+'T00:00:00'); return dt.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}); }
+function escapeHtml(s){ return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(showToast._h);
+  showToast._h = setTimeout(()=> t.classList.remove('show'), 2400);
+}
+
+async function loadData(){
+  try{
+    const res = await window.storage.get(STORAGE_KEY, true);
+    if(res && res.value){ DATA = JSON.parse(res.value); }
+  }catch(e){
+    // key doesn't exist yet — start fresh
+    DATA = { types: [], units: [], allocations: [] };
+  }
+  dataLoaded = true;
+}
+
+async function saveData(){
+  try{
+    const res = await window.storage.set(STORAGE_KEY, JSON.stringify(DATA), true);
+    if(!res){ showToast('Could not save — please retry.'); }
+  }catch(e){
+    showToast('Save failed: ' + (e.message || 'unknown error'));
+  }
+}
+
+/* ---------------- Navigation ---------------- */
+document.getElementById('nav').addEventListener('click', (e)=>{
+  const btn = e.target.closest('button[data-tab]');
+  if(!btn) return;
+  document.querySelectorAll('#nav button').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.tab-page').forEach(p=>p.style.display='none');
+  const page = document.getElementById(btn.dataset.tab);
+  page.style.display='block';
+  renderAll();
+});
+
+/* ---------------- Derived helpers ---------------- */
+function unitsForType(typeId){ return DATA.units.filter(u=>u.typeId===typeId); }
+function freeUnits(typeId){ return unitsForType(typeId).filter(u=>u.status==='free'); }
+function engagedUnits(typeId){ return unitsForType(typeId).filter(u=>u.status==='engaged'); }
+function typeById(id){ return DATA.types.find(t=>t.id===id); }
+function unitById(id){ return DATA.units.find(u=>u.id===id); }
+function activeAllocationForUnit(unitId){ return DATA.allocations.find(a=>a.unitId===unitId && a.status==='active'); }
+
+/* ---------------- Renderers ---------------- */
+function renderAll(){
+  renderDashboard();
+  renderEquipment();
+  renderIssue();
+  renderActive();
+  renderHistory();
+}
+
+function renderDashboard(){
+  const el = document.getElementById('dashboard');
+  const totalTypes = DATA.types.length;
+  const totalUnits = DATA.units.length;
+  const totalEngaged = DATA.units.filter(u=>u.status==='engaged').length;
+  const totalFree = totalUnits - totalEngaged;
+
+  let cards = DATA.types.map(t=>{
+    const free = freeUnits(t.id).length;
+    const engaged = engagedUnits(t.id).length;
+    return `
+      <div class="card">
+        <div class="token-tag ${engaged>0?'engaged':'free'}">${engaged>0?engaged:'✓'}</div>
+        <h3>${escapeHtml(t.name)}</h3>
+        <div style="font-size:12px;color:var(--slate);">Deposit token: <span class="mono" style="color:var(--ink);">₹${t.tokenAmount}</span></div>
+        <div class="stat-row">
+          <div class="stat free"><div class="num">${free}</div><div class="lbl">Free</div></div>
+          <div class="stat engaged"><div class="num">${engaged}</div><div class="lbl">Engaged</div></div>
+          <div class="stat"><div class="num">${free+engaged}</div><div class="lbl">Total</div></div>
+        </div>
+      </div>`;
+  }).join('');
+
+  if(DATA.types.length===0){
+    cards = `<div class="empty" style="grid-column:1/-1;">
+      <div class="display">No equipment added yet</div>
+      <p>Go to <strong>Equipment Types</strong> to add your first item — like a wheelchair or foldable bed.</p>
+    </div>`;
+  }
+
+  el.innerHTML = `
+    <div class="page-head">
+      <div><h2>Dashboard</h2><p class="sub">Live snapshot of every equipment type in the store room.</p></div>
+    </div>
+    <div class="grid" style="margin-bottom:28px;">
+      <div class="card">
+        <h3 style="font-size:13px;color:var(--slate);text-transform:uppercase;letter-spacing:.04em;">Equipment Types</h3>
+        <div class="num mono" style="font-size:30px;">${totalTypes}</div>
+      </div>
+      <div class="card">
+        <h3 style="font-size:13px;color:var(--slate);text-transform:uppercase;letter-spacing:.04em;">Total Units</h3>
+        <div class="num mono" style="font-size:30px;">${totalUnits}</div>
+      </div>
+      <div class="card">
+        <h3 style="font-size:13px;color:var(--slate);text-transform:uppercase;letter-spacing:.04em;">Currently Free</h3>
+        <div class="num mono" style="font-size:30px;color:var(--sage-deep);">${totalFree}</div>
+      </div>
+      <div class="card">
+        <h3 style="font-size:13px;color:var(--slate);text-transform:uppercase;letter-spacing:.04em;">Currently Engaged</h3>
+        <div class="num mono" style="font-size:30px;color:var(--marigold-deep);">${totalEngaged}</div>
+      </div>
+    </div>
+    <h3 style="font-size:15px;margin-bottom:12px;">By Equipment Type</h3>
+    <div class="grid">${cards}</div>
+  `;
+}
+
+function renderEquipment(){
+  const el = document.getElementById('equipment');
+  const rows = DATA.types.map(t=>{
+    const units = unitsForType(t.id);
+    const chips = units.map(u=>`<span class="unit-chip ${u.status}"><span class="dot"></span>${escapeHtml(u.label)}</span>`).join('') || '<span style="color:var(--slate);font-size:12px;">No units yet</span>';
+    return `
+      <div class="panel" data-type-id="${t.id}">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;">
+          <div>
+            <h3 style="margin-bottom:4px;">${escapeHtml(t.name)}</h3>
+            <div style="font-size:12.5px;color:var(--slate);">Deposit token amount: <strong class="mono" style="color:var(--ink);">₹${t.tokenAmount}</strong> · ${units.length} unit(s)</div>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <button class="btn small secondary" data-action="add-unit" data-id="${t.id}">+ Add unit</button>
+            <button class="btn small danger" data-action="delete-type" data-id="${t.id}">Delete type</button>
+          </div>
+        </div>
+        <div style="margin-top:12px;">${chips}</div>
+      </div>`;
+  }).join('') || `<div class="empty"><div class="display">Nothing added yet</div><p>Add your first equipment type below — e.g. Wheelchair, Walking Stand, Foldable Bed.</p></div>`;
+
+  el.innerHTML = `
+    <div class="page-head">
+      <div><h2>Equipment Types</h2><p class="sub">Add any equipment your Trust lends out, and set its token (deposit) amount.</p></div>
+    </div>
+    <div class="panel">
+      <h3>Add new equipment type</h3>
+      <form id="add-type-form">
+        <div class="field-row">
+          <div>
+            <label for="type-name">Equipment name</label>
+            <input type="text" id="type-name" placeholder="e.g. Wheelchair" required>
+          </div>
+          <div>
+            <label for="type-token">Deposit token amount (₹)</label>
+            <input type="number" id="type-token" min="0" step="1" placeholder="e.g. 500" required>
+          </div>
+          <div>
+            <label for="type-qty">Number of units available</label>
+            <input type="number" id="type-qty" min="1" step="1" value="1" required>
+          </div>
+        </div>
+        <button type="submit" class="btn">Add equipment type</button>
+      </form>
+    </div>
+    ${rows}
+  `;
+
+  document.getElementById('add-type-form').onsubmit = async (e)=>{
+    e.preventDefault();
+    const name = document.getElementById('type-name').value.trim();
+    const token = parseFloat(document.getElementById('type-token').value);
+    const qty = parseInt(document.getElementById('type-qty').value,10);
+    if(!name || isNaN(token) || isNaN(qty) || qty<1) return;
+    const typeId = uid('type');
+    DATA.types.push({ id: typeId, name, tokenAmount: token, createdAt: todayStr() });
+    for(let i=1;i<=qty;i++){
+      DATA.units.push({ id: uid('unit'), typeId, label: name+' #'+i, status:'free' });
+    }
+    await saveData();
+    showToast(`${name} added with ${qty} unit(s).`);
+    renderAll();
+  };
+
+  el.querySelectorAll('[data-action="add-unit"]').forEach(btn=>{
+    btn.onclick = async ()=>{
+      const t = typeById(btn.dataset.id);
+      const n = unitsForType(t.id).length + 1;
+      DATA.units.push({ id: uid('unit'), typeId: t.id, label: t.name+' #'+n, status:'free' });
+      await saveData();
+      showToast('Unit added to '+t.name+'.');
+      renderAll();
+    };
+  });
+
+  el.querySelectorAll('[data-action="delete-type"]').forEach(btn=>{
+    btn.onclick = async ()=>{
+      const t = typeById(btn.dataset.id);
+      const engaged = engagedUnits(t.id).length;
+      if(engaged>0){ showToast(`Can't delete — ${engaged} unit(s) still engaged.`); return; }
+      if(!confirm(`Delete "${t.name}" and all its units? This won't remove past history.`)) return;
+      const unitIds = unitsForType(t.id).map(u=>u.id);
+      DATA.units = DATA.units.filter(u=>u.typeId!==t.id);
+      DATA.types = DATA.types.filter(x=>x.id!==t.id);
+      await saveData();
+      showToast(`${t.name} deleted.`);
+      renderAll();
+    };
+  });
+}
+
+function renderIssue(){
+  const el = document.getElementById('issue');
+  const typeOptions = DATA.types.map(t=>`<option value="${t.id}">${escapeHtml(t.name)} (${freeUnits(t.id).length} free)</option>`).join('');
+
+  el.innerHTML = `
+    <div class="page-head">
+      <div><h2>Issue Equipment</h2><p class="sub">Give an equipment unit to a patient against a deposit token.</p></div>
+    </div>
+    ${DATA.types.length===0 ? `<div class="empty"><div class="display">Add equipment first</div><p>Go to Equipment Types to add items before issuing them.</p></div>` : `
+    <div class="panel">
+      <form id="issue-form">
+        <div class="field-row">
+          <div>
+            <label for="issue-type">Equipment type</label>
+            <select id="issue-type" required>
+              <option value="">Select equipment…</option>
+              ${typeOptions}
+            </select>
+          </div>
+          <div>
+            <label for="issue-unit">Unit to hand over</label>
+            <select id="issue-unit" required><option value="">Select equipment type first</option></select>
+          </div>
+        </div>
+        <div class="field-row">
+          <div>
+            <label for="issue-name">Patient name</label>
+            <input type="text" id="issue-name" required>
+          </div>
+          <div>
+            <label for="issue-phone">Contact number</label>
+            <input type="tel" id="issue-phone" placeholder="10-digit mobile">
+          </div>
+        </div>
+        <div class="field-row">
+          <div>
+            <label for="issue-token">Deposit token amount (₹)</label>
+            <input type="number" id="issue-token" min="0" step="1" required>
+          </div>
+          <div>
+            <label for="issue-date">Issue date</label>
+            <input type="date" id="issue-date" required>
+          </div>
+          <div>
+            <label for="issue-return">Expected return date (optional)</label>
+            <input type="date" id="issue-return">
+          </div>
+        </div>
+        <div class="check-row">
+          <input type="checkbox" id="issue-deposit-given">
+          <label for="issue-deposit-given">Deposit token has been received</label>
+        </div>
+        <div class="field-row">
+          <div style="grid-column:1/-1;">
+            <label for="issue-notes">Notes (optional)</label>
+            <textarea id="issue-notes" rows="2" placeholder="Any remarks — condition of equipment, ID proof kept, etc."></textarea>
+          </div>
+        </div>
+        <button type="submit" class="btn">Issue equipment</button>
+      </form>
+    </div>`}
+  `;
+
+  if(DATA.types.length===0) return;
+
+  document.getElementById('issue-date').value = todayStr();
+
+  const typeSel = document.getElementById('issue-type');
+  const unitSel = document.getElementById('issue-unit');
+  const tokenInput = document.getElementById('issue-token');
+
+  typeSel.onchange = ()=>{
+    const t = typeById(typeSel.value);
+    if(!t){ unitSel.innerHTML = '<option value="">Select equipment type first</option>'; return; }
+    const free = freeUnits(t.id);
+    unitSel.innerHTML = free.length
+      ? free.map(u=>`<option value="${u.id}">${escapeHtml(u.label)}</option>`).join('')
+      : '<option value="">No free units — all engaged</option>';
+    tokenInput.value = t.tokenAmount;
+  };
+
+  document.getElementById('issue-form').onsubmit = async (e)=>{
+    e.preventDefault();
+    const typeId = typeSel.value;
+    const unitId = unitSel.value;
+    if(!typeId || !unitId){ showToast('Select an equipment type and a free unit.'); return; }
+    const unit = unitById(unitId);
+    if(!unit || unit.status!=='free'){ showToast('That unit is no longer free — please refresh.'); return; }
+
+    const name = document.getElementById('issue-name').value.trim();
+    const phone = document.getElementById('issue-phone').value.trim();
+    const token = parseFloat(tokenInput.value);
+    const issueDate = document.getElementById('issue-date').value;
+    const expReturn = document.getElementById('issue-return').value;
+    const depositGiven = document.getElementById('issue-deposit-given').checked;
+    const notes = document.getElementById('issue-notes').value.trim();
+
+    unit.status = 'engaged';
+    DATA.allocations.push({
+      id: uid('alloc'), unitId, typeId,
+      patientName: name, patientPhone: phone,
+      tokenAmount: token, depositGiven,
+      issueDate, expectedReturn: expReturn || '', returnDate: '',
+      status: 'active', notes
+    });
+    await saveData();
+    showToast(`${unit.label} issued to ${name}.`);
+    renderAll();
+    document.querySelector('#nav button[data-tab="active"]').click();
+  };
+}
+
+function renderActive(){
+  const el = document.getElementById('active');
+  const active = DATA.allocations.filter(a=>a.status==='active')
+    .sort((a,b)=> a.issueDate < b.issueDate ? 1 : -1);
+
+  const rows = active.map(a=>{
+    const t = typeById(a.typeId);
+    const u = unitById(a.unitId);
+    return `
+      <tr>
+        <td><strong>${escapeHtml(a.patientName)}</strong>${a.patientPhone?`<div style="font-size:11px;color:var(--slate);">${escapeHtml(a.patientPhone)}</div>`:''}</td>
+        <td>${t?escapeHtml(t.name):'—'} <span style="color:var(--slate);font-size:11.5px;">(${u?escapeHtml(u.label):'—'})</span></td>
+        <td class="mono">₹${a.tokenAmount}</td>
+        <td><span class="pill ${a.depositGiven?'yes':'no'}">${a.depositGiven?'Received':'Pending'}</span></td>
+        <td>${fmtDate(a.issueDate)}</td>
+        <td>${a.expectedReturn?fmtDate(a.expectedReturn):'—'}</td>
+        <td><button class="btn small" data-action="return" data-id="${a.id}">Mark returned</button></td>
+      </tr>`;
+  }).join('');
+
+  el.innerHTML = `
+    <div class="page-head">
+      <div><h2>Active Loans</h2><p class="sub">Equipment currently out with patients.</p></div>
+    </div>
+    ${active.length===0 ? `<div class="empty"><div class="display">Nothing out right now</div><p>All equipment is back in the store room.</p></div>` : `
+    <div class="panel" style="padding:8px 16px;">
+      <table>
+        <thead><tr><th>Patient</th><th>Equipment</th><th>Token</th><th>Deposit</th><th>Issued</th><th>Expected return</th><th></th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`}
+  `;
+
+  el.querySelectorAll('[data-action="return"]').forEach(btn=>{
+    btn.onclick = async ()=>{
+      const a = DATA.allocations.find(x=>x.id===btn.dataset.id);
+      if(!a) return;
+      const date = prompt('Return date (YYYY-MM-DD)?', todayStr());
+      if(date===null) return;
+      a.returnDate = date || todayStr();
+      a.status = 'returned';
+      const unit = unitById(a.unitId);
+      if(unit) unit.status = 'free';
+      await saveData();
+      showToast(`${unit?unit.label:'Equipment'} marked as returned.`);
+      renderAll();
+    };
+  });
+}
+
+function renderHistory(){
+  const el = document.getElementById('history');
+  const allTypesOptions = DATA.types.map(t=>`<option value="${t.id}">${escapeHtml(t.name)}</option>`).join('');
+
+  el.innerHTML = `
+    <div class="page-head">
+      <div><h2>Full History</h2><p class="sub">Every allocation ever recorded — active and returned.</p></div>
+    </div>
+    <div class="toolbar">
+      <input type="text" id="hist-search" placeholder="Search patient name or phone…">
+      <select id="hist-type"><option value="">All equipment types</option>${allTypesOptions}</select>
+      <select id="hist-status">
+        <option value="">All statuses</option>
+        <option value="active">Active</option>
+        <option value="returned">Returned</option>
+      </select>
+    </div>
+    <div class="panel" style="padding:8px 16px;">
+      <table>
+        <thead><tr><th>Patient</th><th>Equipment</th><th>Token</th><th>Deposit</th><th>Issued</th><th>Returned</th><th>Status</th></tr></thead>
+        <tbody id="hist-tbody"></tbody>
+      </table>
+    </div>
+  `;
+
+  function draw(){
+    const q = document.getElementById('hist-search').value.trim().toLowerCase();
+    const typeFilter = document.getElementById('hist-type').value;
+    const statusFilter = document.getElementById('hist-status').value;
+
+    let rows = DATA.allocations.slice().sort((a,b)=> a.issueDate < b.issueDate ? 1 : -1);
+    rows = rows.filter(a=>{
+      if(typeFilter && a.typeId!==typeFilter) return false;
+      if(statusFilter && a.status!==statusFilter) return false;
+      if(q){
+        const hay = (a.patientName+' '+a.patientPhone).toLowerCase();
+        if(!hay.includes(q)) return false;
+      }
+      return true;
+    });
+
+    const tbody = document.getElementById('hist-tbody');
+    if(rows.length===0){
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--slate);padding:30px;">No records match.</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = rows.map(a=>{
+      const t = typeById(a.typeId);
+      const u = unitById(a.unitId);
+      return `
+        <tr>
+          <td><strong>${escapeHtml(a.patientName)}</strong>${a.patientPhone?`<div style="font-size:11px;color:var(--slate);">${escapeHtml(a.patientPhone)}</div>`:''}</td>
+          <td>${t?escapeHtml(t.name):'—'} <span style="color:var(--slate);font-size:11.5px;">(${u?escapeHtml(u.label):'—'})</span></td>
+          <td class="mono">₹${a.tokenAmount}</td>
+          <td><span class="pill ${a.depositGiven?'yes':'no'}">${a.depositGiven?'Received':'Pending'}</span></td>
+          <td>${fmtDate(a.issueDate)}</td>
+          <td>${a.returnDate?fmtDate(a.returnDate):'—'}</td>
+          <td><span class="pill ${a.status}">${a.status==='active'?'Active':'Returned'}</span></td>
+        </tr>`;
+    }).join('');
+  }
+
+  document.getElementById('hist-search').oninput = draw;
+  document.getElementById('hist-type').onchange = draw;
+  document.getElementById('hist-status').onchange = draw;
+  draw();
+}
+
+/* ---------------- Boot ---------------- */
+(async function init(){
+  await loadData();
+  renderAll();
+})();
+</script>
+</body>
+</html>

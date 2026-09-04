@@ -1,0 +1,121 @@
+<svg viewBox="0 0 1440 900" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1c1245"/>
+      <stop offset="45%" stop-color="#3a1f6e"/>
+      <stop offset="75%" stop-color="#5c2f86"/>
+      <stop offset="100%" stop-color="#8b4a9c"/>
+    </linearGradient>
+    <radialGradient id="moonGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#fff7e0" stop-opacity="0.9"/>
+      <stop offset="60%" stop-color="#fff7e0" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#fff7e0" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="mtnBack" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#4a2f74"/>
+      <stop offset="100%" stop-color="#3a2260"/>
+    </linearGradient>
+    <linearGradient id="mtnMid" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#3c2560"/>
+      <stop offset="100%" stop-color="#2c1a48"/>
+    </linearGradient>
+    <linearGradient id="mtnFront" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#2a1a48"/>
+      <stop offset="100%" stop-color="#1c1236"/>
+    </linearGradient>
+    <linearGradient id="snowGround" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#7a5a9e"/>
+      <stop offset="100%" stop-color="#4a3070"/>
+    </linearGradient>
+    <radialGradient id="windowGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ffd27a" stop-opacity="1"/>
+      <stop offset="100%" stop-color="#ffd27a" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="1440" height="900" fill="url(#sky)"/>
+
+  <!-- stars -->
+  <g fill="#ffffff">
+    <circle cx="120" cy="90" r="1.6" opacity="0.8"/>
+    <circle cx="260" cy="150" r="1.2" opacity="0.6"/>
+    <circle cx="400" cy="70" r="1.8" opacity="0.9"/>
+    <circle cx="620" cy="110" r="1.3" opacity="0.7"/>
+    <circle cx="820" cy="60" r="1.5" opacity="0.8"/>
+    <circle cx="980" cy="130" r="1.2" opacity="0.6"/>
+    <circle cx="1150" cy="80" r="1.7" opacity="0.85"/>
+    <circle cx="1320" cy="140" r="1.3" opacity="0.7"/>
+    <circle cx="60" cy="220" r="1.1" opacity="0.5"/>
+    <circle cx="1380" cy="230" r="1.4" opacity="0.6"/>
+    <circle cx="500" cy="180" r="1" opacity="0.5"/>
+    <circle cx="1050" cy="200" r="1" opacity="0.5"/>
+  </g>
+
+  <!-- moon -->
+  <circle cx="1180" cy="150" r="140" fill="url(#moonGlow)"/>
+  <circle cx="1180" cy="150" r="46" fill="#fdf6e3"/>
+
+  <!-- soft clouds -->
+  <g fill="#ffffff" opacity="0.12">
+    <ellipse cx="230" cy="230" rx="120" ry="26"/>
+    <ellipse cx="310" cy="245" rx="90" ry="20"/>
+    <ellipse cx="1250" cy="330" rx="140" ry="28"/>
+    <ellipse cx="1160" cy="345" rx="90" ry="20"/>
+  </g>
+
+  <!-- back mountains -->
+  <path d="M0,520 L140,380 L260,460 L400,320 L560,470 L700,360 L860,480 L1000,340 L1160,470 L1300,390 L1440,500 L1440,900 L0,900 Z" fill="url(#mtnBack)"/>
+
+  <!-- mid mountains with snow caps -->
+  <path d="M0,600 L180,430 L320,540 L480,380 L640,560 L820,410 L980,570 L1160,420 L1320,560 L1440,470 L1440,900 L0,900 Z" fill="url(#mtnMid)"/>
+
+  <!-- front mountains -->
+  <path d="M0,680 L200,520 L360,630 L540,480 L720,650 L920,510 L1100,650 L1280,540 L1440,630 L1440,900 L0,900 Z" fill="url(#mtnFront)"/>
+
+  <!-- snow ground -->
+  <path d="M0,760 Q360,700 720,750 T1440,740 L1440,900 L0,900 Z" fill="url(#snowGround)"/>
+
+  <!-- pine trees, left cluster -->
+  <g fill="#20142f">
+    <path d="M120,880 L155,880 L155,820 L175,820 L137.5,760 L165,760 L130,700 L158,700 L137.5,660 L117,700 L145,700 L110,760 L137.5,760 L100,820 L120,820 Z"/>
+    <path d="M40,880 L75,880 L75,840 L92,840 L57.5,790 L82,790 L52,745 L75,745 L57.5,715 L40,745 L63,745 L33,790 L58,790 L25,840 L40,840 Z"/>
+    <path d="M220,880 L248,880 L248,845 L262,845 L235,805 L255,805 L230,768 L248,768 L235,745 L222,768 L240,768 L215,805 L235,805 L208,845 L220,845 Z"/>
+  </g>
+  <!-- snow dusting on left trees -->
+  <g fill="#efe6fb" opacity="0.85">
+    <path d="M137.5,660 L145,700 L130,700 Z"/>
+    <path d="M57.5,715 L63,745 L52,745 Z"/>
+    <path d="M235,745 L240,768 L230,768 Z"/>
+  </g>
+
+  <!-- cabin -->
+  <g>
+    <rect x="1080" y="770" width="180" height="100" fill="#2a1a3f"/>
+    <path d="M1065,770 L1170,700 L1275,770 Z" fill="#1e1330"/>
+    <rect x="1160" y="690" width="16" height="46" fill="#241536"/>
+    <ellipse cx="1168" cy="680" rx="10" ry="7" fill="#c9bcd8" opacity="0.5"/>
+    <ellipse cx="1178" cy="662" rx="14" ry="9" fill="#c9bcd8" opacity="0.4"/>
+    <ellipse cx="1190" cy="640" rx="18" ry="11" fill="#c9bcd8" opacity="0.3"/>
+    <ellipse cx="1204" cy="614" rx="22" ry="13" fill="#c9bcd8" opacity="0.2"/>
+    <rect x="1105" y="800" width="34" height="34" rx="3" fill="url(#windowGlow)"/>
+    <rect x="1108" y="803" width="28" height="28" rx="2" fill="#ffcf7a"/>
+    <rect x="1198" y="800" width="34" height="34" rx="3" fill="url(#windowGlow)"/>
+    <rect x="1201" y="803" width="28" height="28" rx="2" fill="#ffcf7a"/>
+    <rect x="1150" y="805" width="30" height="65" fill="#1a0f28"/>
+    <path d="M1055,772 L1170,698 L1285,772 L1275,780 L1170,712 L1065,780 Z" fill="#efe6fb" opacity="0.8"/>
+  </g>
+
+  <!-- pine trees, right of cabin and foreground -->
+  <g fill="#150c22">
+    <path d="M1340,880 L1385,880 L1385,825 L1408,825 L1362.5,760 L1395,760 L1350,695 L1382,695 L1362.5,650 L1340,695 L1373,695 L1330,760 L1362.5,760 L1318,825 L1340,825 Z"/>
+    <path d="M1010,880 L1045,880 L1045,838 L1063,838 L1027.5,785 L1053,785 L1022,738 L1045,738 L1027.5,708 L1010,738 L1033,738 L1002,785 L1028,785 L995,838 L1010,838 Z"/>
+  </g>
+  <g fill="#efe6fb" opacity="0.85">
+    <path d="M1362.5,650 L1373,695 L1350,695 Z"/>
+    <path d="M1027.5,708 L1033,738 L1022,738 Z"/>
+  </g>
+
+  <!-- foreground snow -->
+  <path d="M0,850 Q400,810 800,845 T1440,830 L1440,900 L0,900 Z" fill="#efe6fb"/>
+  <path d="M0,850 Q400,810 800,845 T1440,830" fill="none" stroke="#d9caf0" stroke-width="2" opacity="0.6"/>
+</svg>
