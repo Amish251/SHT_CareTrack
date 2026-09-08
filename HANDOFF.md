@@ -973,3 +973,129 @@ Function invocation. That's the literal next step, laid out as Parts
   check the activity log as superadmin) is the real remaining
   verification step, and it needs actual Supabase/Vercel accounts this
   sandbox doesn't have.
+
+### This session — 6 fixes/features on the live app, no database/schema changes
+
+All changes are frontend-only (React/TypeScript code) — nothing in
+`supabase/schema.sql` changed, so this update is a pure code deploy with
+zero risk to existing live data. See "How to deploy this update" below.
+
+1. **"free" → "Available" wording on Issue Equipment.** Changed the two
+   spots in `IssuePage.tsx` where unit counts show next to equipment
+   names in the dropdowns (`{n} free` → `{n} available`, and "No free
+   units" → "No units available"), plus the matching validation toast.
+   Scoped narrowly to Issue Equipment only, per the request — left
+   Dashboard's "Currently Free" stat card and unit-chip wording alone
+   since those weren't mentioned and changing wording elsewhere risked
+   inconsistency with no benefit.
+
+2. **Search + filter on Active Loans.** `ActiveLoansPage.tsx` gained the
+   same toolbar pattern History already had: free-text search (matches
+   patient name, phone, equipment type, and unit label) plus an
+   equipment-type filter and a deposit-status filter (Received/Pending).
+   Empty state now distinguishes "nothing out right now" from "no
+   matches for this search/filter."
+
+3. **New "Token Overview" tab** under Equipment Register (admin-only,
+   same access level as Donation) — `TokenOverviewPage.tsx`, new route
+   `/equipment-register/tokens`, new sidebar entry. Three summary
+   numbers: **Currently Held** (deposit collected, equipment still on
+   loan), **Pending Collection** (equipment issued, deposit not yet
+   taken), **Returned** (equipment came back, deposit given back to the
+   patient) — plus a recent-activity table. Worth knowing: "Returned"
+   only counts allocations where `depositGiven` was `true` at some
+   point; there's no explicit "deposit refunded" event tracked
+   separately from "equipment marked returned," so this treats every
+   returned-with-deposit-collected record as refunded. If the Trust
+   ever keeps a deposit instead of refunding it (damage, etc.), that
+   distinction isn't captured anywhere yet — flagging this as a
+   modeling gap, not a bug.
+
+4. **Dashboard now shows Token + Donation totals at a glance.**
+   `DashboardPage.tsx` now also reads `useFinanceData()` (safe — this
+   whole page is already wrapped in `<AdminOnly>` in `App.tsx`, so no
+   staff session ever renders it) and shows a compact 4-card row (Token
+   Held, Token Pending, Total Donations, Donation Balance) with links
+   through to the full Token Overview and Donation Overview pages,
+   sitting between the existing unit-count cards and the "Add new
+   equipment type" panel.
+
+5. **Receipt View/Share on Full History, including returned records.**
+   `HistoryPage.tsx` gained the same `handleViewReceipt`/
+   `handleSendReceipt`/`PdfPreviewModal` setup Active Loans already had
+   — shown on any row (active or returned) where a deposit was actually
+   collected. Previously the only way to see a receipt again after
+   equipment was returned was to have saved the PDF at issue time.
+
+6. **Fixed the real bug behind "editing a record doesn't show up on its
+   receipt — but only for one record."** Root cause, confirmed by
+   reading the code rather than guessing: `buildDepositReceiptPdf()`
+   built the receipt's header (patient name, phone, issue date,
+   "received by") from `allocations[0]` of the multi-item group, where
+   that array is sorted by database id — **not** from the specific
+   allocation the person actually clicked "View"/"Edit" on. For a
+   single-item issue this is invisible (there's only one record, so
+   "the group's first item" and "the record you're looking at" are
+   always the same thing) — which is exactly why it only showed up on
+   one record and looked fine everywhere else. For a multi-item visit
+   (2+ pieces of equipment issued together), editing the *second* line
+   item's patient name updated that allocation correctly in the
+   database, but its receipt kept showing the *first* line item's
+   (unedited) name, because the header always read from whichever
+   allocation happened to sort first, not from the one that was edited.
+   **Fix**: `buildDepositReceiptPdf()`'s signature changed from
+   `(allocations, data)` to `(primary, group, data)` — `primary` is
+   now explicitly the exact allocation the person clicked from, driving
+   every header field; `group` still drives the itemized table and
+   total, unchanged. All four call sites (`ActiveLoansPage.tsx` ×2,
+   `HistoryPage.tsx` ×2) updated to pass the specific `allocation` as
+   `primary`. Grepped the whole codebase afterward to confirm no call
+   site was still using the old 2-argument form — and since this
+   project builds with `strict: true`, a stale 2-arg call would have
+   been a compile error anyway, not just a missed grep hit.
+
+**Verification this session:** `npm run build` clean, no TypeScript
+errors (`tsc -b --noEmit` also run explicitly as a second pass). **Not
+tested against a live Supabase project or in a real browser** — this
+sandbox has no credentials for the actual deployed project, so nothing
+here has been clicked through for real. The fix for #6 in particular is
+verified by *reading* the exact mechanism of the bug and confirming the
+data flow after the fix is correct (every header field now reads from
+the clicked-on record, not a sorted array's first element) — not by
+reproducing the bug live and watching it disappear. Recommend
+specifically re-testing #6 with a real multi-item issue once deployed:
+issue 2+ items to one patient in one visit, edit the second item's name
+from Active Loans, then view that second item's receipt and confirm the
+new name appears.
+
+## How to deploy this update (code only — data is untouched)
+
+This matters because it surprises people the first time: **your Trust's
+actual data (equipment, loans, donations) lives entirely in Supabase,
+completely separate from this code.** Pushing new frontend code to
+GitHub → Vercel redeploys the *app*, not the *database*. Nothing in this
+session touched `supabase/schema.sql`, so there is no SQL to re-run and
+no risk to existing records — a code deploy and a data change are two
+completely independent things in this architecture.
+
+1. Replace the contents of your local `caretrack` folder with this
+   updated version (unzip over the top, or copy files in).
+2. Open a terminal in that folder and run:
+   ```bash
+   git add .
+   git commit -m "Add token overview, active-loan search, history receipts, fix receipt bug"
+   git push
+   ```
+3. That's it — Vercel is already connected to this GitHub repo from the
+   original deploy, so it picks up the push automatically and rebuilds
+   within about a minute. No dashboard clicks needed, no environment
+   variables to touch, no Supabase steps.
+4. Once Vercel shows the new deployment as "Ready," refresh the live
+   site (a hard refresh — Ctrl+Shift+R / Cmd+Shift+R — avoids seeing a
+   cached old version) and confirm the new Token Overview tab and
+   Active Loans search box are there.
+
+If `git push` asks for credentials again, same as before: use a GitHub
+Personal Access Token as the password, generated fresh (Settings →
+Developer settings → Personal access tokens), never pasted anywhere
+except directly into the terminal prompt when asked.

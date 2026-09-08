@@ -104,7 +104,7 @@ export default function IssuePage() {
     e.preventDefault();
 
     if (lines.some((l) => !l.typeId || !l.unitId)) {
-      showToast('Select an equipment type and a free unit for every line.');
+      showToast('Select an equipment type and an available unit for every line.');
       return;
     }
     const unitIds = lines.map((l) => l.unitId);
@@ -318,7 +318,7 @@ export default function IssuePage() {
                       <option value="">Select equipment…</option>
                       {data.types.map((t) => (
                         <option key={t.id} value={t.id}>
-                          {t.name} ({freeUnits(t).length} free)
+                          {t.name} ({freeUnits(t).length} available)
                         </option>
                       ))}
                     </select>
@@ -335,7 +335,7 @@ export default function IssuePage() {
                       {!selectedType ? (
                         <option value="">Select equipment type first</option>
                       ) : availableUnits.length === 0 ? (
-                        <option value="">No free units — all engaged</option>
+                        <option value="">No units available — all engaged</option>
                       ) : (
                         availableUnits.map((u) => (
                           <option key={u.id} value={u.id}>

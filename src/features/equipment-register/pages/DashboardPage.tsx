@@ -1,5 +1,7 @@
 import { useState, type FormEvent } from 'react';
+import { Link } from 'react-router-dom';
 import { useEquipmentData } from '../store';
+import { useFinanceData } from '@/features/finance/store';
 import { engagedUnits, freeUnits } from '../helpers';
 import { uid } from '@/shared/lib/storage';
 import { useToast } from '@/shared/components/ui/Toast';
@@ -9,6 +11,7 @@ import { pickField } from '@/shared/lib/tableExport';
 
 export default function DashboardPage() {
   const [data, update] = useEquipmentData();
+  const [financeData] = useFinanceData();
   const { showToast } = useToast();
 
   const [name, setName] = useState('');
@@ -22,6 +25,18 @@ export default function DashboardPage() {
   const totalUnits = data.types.reduce((sum, t) => sum + t.units.length, 0);
   const totalEngaged = data.types.reduce((sum, t) => sum + engagedUnits(t).length, 0);
   const totalFree = totalUnits - totalEngaged;
+
+  let tokenHeld = 0;
+  let tokenPending = 0;
+  for (const a of data.allocations) {
+    if (a.status === 'active') {
+      if (a.depositGiven) tokenHeld += a.tokenAmount;
+      else tokenPending += a.tokenAmount;
+    }
+  }
+  const totalDonations = financeData.entries.filter((e) => e.kind === 'donation').reduce((s, e) => s + e.amount, 0);
+  const totalExpenses = financeData.entries.filter((e) => e.kind === 'expense').reduce((s, e) => s + e.amount, 0);
+  const donationBalance = totalDonations - totalExpenses;
 
   function handleAddType(e: FormEvent) {
     e.preventDefault();
@@ -203,6 +218,46 @@ export default function DashboardPage() {
           <h3 className="card-eyebrow">Currently Engaged</h3>
           <div className="num mono" style={{ fontSize: 30, color: 'var(--marigold-deep)' }}>
             {totalEngaged}
+          </div>
+        </div>
+      </div>
+
+      <div className="panel">
+        <div className="panel-head" style={{ marginBottom: 14 }}>
+          <h3 style={{ margin: 0 }}>Tokens &amp; Donations at a glance</h3>
+          <div className="row-actions">
+            <Link to="/equipment-register/tokens" className="btn small secondary">
+              Full Token Overview
+            </Link>
+            <Link to="/finance" className="btn small secondary">
+              Full Donation Overview
+            </Link>
+          </div>
+        </div>
+        <div className="grid">
+          <div className="card">
+            <h3 className="card-eyebrow">Token Held</h3>
+            <div className="num mono" style={{ fontSize: 22, color: 'var(--primary-deep)' }}>
+              ₹{tokenHeld.toLocaleString('en-IN')}
+            </div>
+          </div>
+          <div className="card">
+            <h3 className="card-eyebrow">Token Pending</h3>
+            <div className="num mono" style={{ fontSize: 22, color: 'var(--marigold-deep)' }}>
+              ₹{tokenPending.toLocaleString('en-IN')}
+            </div>
+          </div>
+          <div className="card">
+            <h3 className="card-eyebrow">Total Donations</h3>
+            <div className="num mono" style={{ fontSize: 22, color: 'var(--sage-deep)' }}>
+              ₹{totalDonations.toLocaleString('en-IN')}
+            </div>
+          </div>
+          <div className="card">
+            <h3 className="card-eyebrow">Donation Balance</h3>
+            <div className="num mono" style={{ fontSize: 22, color: donationBalance >= 0 ? 'var(--primary-deep)' : 'var(--rust)' }}>
+              ₹{donationBalance.toLocaleString('en-IN')}
+            </div>
           </div>
         </div>
       </div>

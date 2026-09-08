@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useEquipmentData } from '../store';
 import { allocationsInGroup, fmtDate, todayStr, typeById, unitById } from '../helpers';
@@ -12,10 +12,28 @@ export default function ActiveLoansPage() {
   const { showToast } = useToast();
   const { session } = useAuth();
   const [preview, setPreview] = useState<{ url: string; title: string } | null>(null);
+  const [query, setQuery] = useState('');
+  const [typeFilter, setTypeFilter] = useState('');
+  const [depositFilter, setDepositFilter] = useState<'' | 'yes' | 'no'>('');
 
-  const active = data.allocations
-    .filter((a) => a.status === 'active')
-    .sort((a, b) => (a.issueDate < b.issueDate ? 1 : -1));
+  const active = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return data.allocations
+      .filter((a) => a.status === 'active')
+      .filter((a) => {
+        if (typeFilter && a.typeId !== typeFilter) return false;
+        if (depositFilter === 'yes' && !a.depositGiven) return false;
+        if (depositFilter === 'no' && a.depositGiven) return false;
+        if (q) {
+          const t = typeById(data, a.typeId);
+          const found = unitById(data, a.unitId);
+          const hay = `${a.patientName} ${a.patientPhone} ${t ? t.name : ''} ${found ? found.unit.label : ''}`.toLowerCase();
+          if (!hay.includes(q)) return false;
+        }
+        return true;
+      })
+      .sort((a, b) => (a.issueDate < b.issueDate ? 1 : -1));
+  }, [data, query, typeFilter, depositFilter]);
 
   function handleMarkReturned(allocationId: string) {
     const allocation = data.allocations.find((a) => a.id === allocationId);
@@ -96,7 +114,7 @@ export default function ActiveLoansPage() {
     showToast('Preparing receipt…');
     try {
       const { buildDepositReceiptPdf } = await import('@/shared/lib/receipt');
-      const blob = await buildDepositReceiptPdf(group, data);
+      const blob = await buildDepositReceiptPdf(allocation, group, data);
       const url = URL.createObjectURL(blob);
       setPreview({ url, title: `Receipt — ${allocation.patientName}` });
     } catch (err) {
@@ -118,7 +136,7 @@ export default function ActiveLoansPage() {
     showToast('Preparing receipt…');
     try {
       const { buildDepositReceiptPdf, shareReceiptOnWhatsApp } = await import('@/shared/lib/receipt');
-      const blob = await buildDepositReceiptPdf(group, data);
+      const blob = await buildDepositReceiptPdf(allocation, group, data);
       const itemDesc = group.length > 1 ? `${group.length} items` : type ? type.name : 'equipment';
       const message = `Security deposit receipt for ${itemDesc} — ${allocation.patientName}. Please find the receipt attached.`;
       const filename = `receipt-${allocation.patientName.replace(/\s+/g, '-')}.pdf`;
@@ -143,10 +161,36 @@ export default function ActiveLoansPage() {
         </div>
       </div>
 
+      <div className="toolbar">
+        <input
+          type="text"
+          placeholder="Search patient, phone, or equipment…"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+        />
+        <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
+          <option value="">All equipment types</option>
+          {data.types.map((t) => (
+            <option key={t.id} value={t.id}>
+              {t.name}
+            </option>
+          ))}
+        </select>
+        <select value={depositFilter} onChange={(e) => setDepositFilter(e.target.value as '' | 'yes' | 'no')}>
+          <option value="">All deposit statuses</option>
+          <option value="yes">Received</option>
+          <option value="no">Pending</option>
+        </select>
+      </div>
+
       {active.length === 0 ? (
         <div className="empty">
-          <div className="display">Nothing out right now</div>
-          <p>All equipment is back in the store room.</p>
+          <div className="display">{data.allocations.some((a) => a.status === 'active') ? 'No matches' : 'Nothing out right now'}</div>
+          <p>
+            {data.allocations.some((a) => a.status === 'active')
+              ? 'Try a different search or filter.'
+              : 'All equipment is back in the store room.'}
+          </p>
         </div>
       ) : (
         <div className="panel table-wrap" style={{ padding: '8px 16px' }}>

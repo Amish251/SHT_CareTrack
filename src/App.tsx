@@ -7,6 +7,7 @@ import DashboardPage from './features/equipment-register/pages/DashboardPage';
 import IssuePage from './features/equipment-register/pages/IssuePage';
 import ActiveLoansPage from './features/equipment-register/pages/ActiveLoansPage';
 import HistoryPage from './features/equipment-register/pages/HistoryPage';
+import TokenOverviewPage from './features/equipment-register/pages/TokenOverviewPage';
 import EditAllocationPage from './features/equipment-register/pages/EditAllocationPage';
 import FinanceOverviewPage from './features/finance/pages/OverviewPage';
 import AddEntryPage from './features/finance/pages/AddEntryPage';
@@ -53,6 +54,14 @@ export default function App() {
         <Route path="/equipment-register/issue" element={<IssuePage />} />
         <Route path="/equipment-register/active" element={<ActiveLoansPage />} />
         <Route path="/equipment-register/history" element={<HistoryPage />} />
+        <Route
+          path="/equipment-register/tokens"
+          element={
+            <AdminOnly message="Token Overview is limited to admin accounts.">
+              <TokenOverviewPage />
+            </AdminOnly>
+          }
+        />
         <Route path="/equipment-register/edit/:id" element={<EditAllocationPage />} />
 
         {/* Finance module — admin-only. Staff accounts never see donation/expense records. */}

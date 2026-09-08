@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useEquipmentData } from '../store';
 import { allocationsInGroup, fmtDate, typeById, unitById } from '../helpers';
 import { useToast } from '@/shared/components/ui/Toast';
+import PdfPreviewModal from '@/shared/components/PdfPreviewModal';
 
 export default function HistoryPage() {
   const [data, update] = useEquipmentData();
@@ -10,6 +11,7 @@ export default function HistoryPage() {
   const [query, setQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [preview, setPreview] = useState<{ url: string; title: string } | null>(null);
 
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -47,6 +49,51 @@ export default function HistoryPage() {
     }));
 
     showToast('Record deleted.');
+  }
+
+  function closePreview() {
+    if (preview) URL.revokeObjectURL(preview.url);
+    setPreview(null);
+  }
+
+  async function handleViewReceipt(allocationId: string) {
+    const allocation = data.allocations.find((a) => a.id === allocationId);
+    if (!allocation) return;
+    const group = allocationsInGroup(data, allocation);
+    showToast('Preparing receipt…');
+    try {
+      const { buildDepositReceiptPdf } = await import('@/shared/lib/receipt');
+      const blob = await buildDepositReceiptPdf(allocation, group, data);
+      const url = URL.createObjectURL(blob);
+      setPreview({ url, title: `Receipt — ${allocation.patientName}` });
+    } catch (err) {
+      console.error('Receipt generation failed:', err);
+      showToast('Could not generate the receipt — please try again or report this.');
+    }
+  }
+
+  async function handleSendReceipt(allocationId: string) {
+    const allocation = data.allocations.find((a) => a.id === allocationId);
+    if (!allocation) return;
+    const group = allocationsInGroup(data, allocation);
+    const type = typeById(data, allocation.typeId);
+    showToast('Preparing receipt…');
+    try {
+      const { buildDepositReceiptPdf, shareReceiptOnWhatsApp } = await import('@/shared/lib/receipt');
+      const blob = await buildDepositReceiptPdf(allocation, group, data);
+      const itemDesc = group.length > 1 ? `${group.length} items` : type ? type.name : 'equipment';
+      const message = `Security deposit receipt for ${itemDesc} — ${allocation.patientName}. Please find the receipt attached.`;
+      const filename = `receipt-${allocation.patientName.replace(/\s+/g, '-')}.pdf`;
+      const result = await shareReceiptOnWhatsApp(allocation.patientPhone, blob, filename, message);
+      showToast(
+        result === 'shared'
+          ? 'Receipt shared.'
+          : 'Receipt downloaded and WhatsApp opened — attach the file to send it.'
+      );
+    } catch (err) {
+      console.error('Receipt generation failed:', err);
+      showToast('Could not generate the receipt — please try again or report this.');
+    }
   }
 
   return (
@@ -136,6 +183,16 @@ export default function HistoryPage() {
                     </td>
                     <td>
                       <div className="row-actions">
+                        {a.depositGiven && (
+                          <>
+                            <button type="button" className="btn small secondary" onClick={() => handleViewReceipt(a.id)}>
+                              View
+                            </button>
+                            <button type="button" className="btn small secondary" onClick={() => handleSendReceipt(a.id)}>
+                              Share
+                            </button>
+                          </>
+                        )}
                         <Link to={`/equipment-register/edit/${a.id}`} className="btn small secondary">
                           Edit
                         </Link>
@@ -151,6 +208,8 @@ export default function HistoryPage() {
           </tbody>
         </table>
       </div>
+
+      {preview && <PdfPreviewModal url={preview.url} title={preview.title} onClose={closePreview} />}
     </div>
   );
 }

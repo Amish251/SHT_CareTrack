@@ -144,27 +144,31 @@ class Receipt {
 
 /**
  * Builds a security-deposit receipt as a PDF blob, with the Trust's logo in the header.
- * Accepts one or more allocations issued in the same visit (a "batch") and lists every
- * item on the same receipt with a combined total — pass a single-item array for the
- * ordinary one-item case.
+ * `primary` is the specific allocation the person clicked "View"/"Share" on — its own
+ * patient/contact/issue-date/received-by fields drive the header, regardless of which
+ * other allocations share its `group` (multi-item visits sort the group by id, which
+ * isn't necessarily the record someone's looking at — using `primary` for the header
+ * instead of "group[0]" is what makes an edit to one specific record always show up on
+ * that record's own receipt). `group` still drives the itemized table and total —
+ * pass `[primary]` for the ordinary one-item case.
  */
 export async function buildDepositReceiptPdf(
-  allocations: Allocation[],
+  primary: Allocation,
+  group: Allocation[],
   data: EquipmentRegisterData
 ): Promise<Blob> {
-  if (allocations.length === 0) throw new Error('buildDepositReceiptPdf: no allocations given');
-  const first = allocations[0];
-  const isBatch = allocations.length > 1;
-  const receiptNo = `SHT/EQ/${(first.groupId || first.id).slice(-6).toUpperCase()}`;
+  if (group.length === 0) throw new Error('buildDepositReceiptPdf: no allocations given');
+  const isBatch = group.length > 1;
+  const receiptNo = `SHT/EQ/${(primary.groupId || primary.id).slice(-6).toUpperCase()}`;
 
   const r = new Receipt();
   const logo = await loadLogoDataUrl();
   await r.drawHeader('Security Deposit Receipt', receiptNo, logo);
   const { doc, marginX, rightEdge } = r;
 
-  r.row('Received from:', first.patientName || '—');
-  if (first.patientPhone) r.row('Contact number:', first.patientPhone);
-  r.row('Issue date:', fmtDate(first.issueDate));
+  r.row('Received from:', primary.patientName || '—');
+  if (primary.patientPhone) r.row('Contact number:', primary.patientPhone);
+  r.row('Issue date:', fmtDate(primary.issueDate));
 
   r.y += 8;
   const tableStartY = r.y;
@@ -173,7 +177,7 @@ export async function buildDepositReceiptPdf(
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(10);
   let total = 0;
-  for (const a of allocations) {
+  for (const a of group) {
     const type = typeById(data, a.typeId);
     const found = unitById(data, a.unitId);
     const itemLabel = `${type ? type.name : '—'}${found ? ' (' + found.unit.label + ')' : ''}`;
@@ -205,7 +209,7 @@ export async function buildDepositReceiptPdf(
   doc.setFontSize(10.5);
   doc.text('Received & allocated by:', marginX, r.y);
   doc.setFont('helvetica', 'normal');
-  doc.text(first.depositReceivedBy || '—', marginX + 150, r.y);
+  doc.text(primary.depositReceivedBy || '—', marginX + 150, r.y);
   r.y += 22;
 
   r.signatureBlock(

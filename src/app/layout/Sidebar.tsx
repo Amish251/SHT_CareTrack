@@ -32,7 +32,8 @@ const NAV_ITEMS: NavItem[] = [
       { to: '/equipment-register', label: 'Dashboard', tag: '01', end: true, adminOnly: true },
       { to: '/equipment-register/issue', label: 'Issue Equipment', tag: '02' },
       { to: '/equipment-register/active', label: 'Active Loans', tag: '03' },
-      { to: '/equipment-register/history', label: 'Full History', tag: '04' }
+      { to: '/equipment-register/history', label: 'Full History', tag: '04' },
+      { to: '/equipment-register/tokens', label: 'Token Overview', tag: '05', adminOnly: true }
     ]
   },
   {
