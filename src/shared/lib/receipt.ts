@@ -282,33 +282,24 @@ export async function buildDonationReceiptPdf(entry: FinanceEntry, data: Finance
 }
 
 /**
- * Shares a receipt straight into WhatsApp when the browser supports the
- * Web Share API with files (works on mobile Chrome/Android). Otherwise
- * downloads the PDF and opens a WhatsApp chat with a prefilled message so
- * the person can attach the file manually.
+ * Shares a receipt on WhatsApp with THAT RECORD'S OWN NUMBER — always opens
+ * that specific number's chat via a `wa.me/<digits>` deep link, with the PDF
+ * downloaded first so it's one tap away to attach inside the now-open chat.
+ *
+ * Deliberately does NOT use the Web Share API (`navigator.share`) as the
+ * primary path even though it can attach the file directly: the OS/browser
+ * share sheet hands off to WhatsApp's own generic "choose a chat" screen,
+ * not the specific contact — no website can skip that picker for a named
+ * contact, since WhatsApp doesn't expose that to the web on purpose (privacy).
+ * Opening the right chat every time matters more here than auto-attaching,
+ * so `wa.me` (which *is* guaranteed to open one specific number's chat) wins.
  */
 export async function shareReceiptOnWhatsApp(
   phone: string,
   blob: Blob,
   filename: string,
   message: string
-): Promise<'shared' | 'downloaded'> {
-  const file = new File([blob], filename, { type: 'application/pdf' });
-
-  const nav = navigator as Navigator & {
-    canShare?: (data: { files: File[] }) => boolean;
-    share?: (data: { files: File[]; title?: string; text?: string }) => Promise<void>;
-  };
-
-  if (nav.canShare && nav.canShare({ files: [file] }) && nav.share) {
-    try {
-      await nav.share({ files: [file], title: filename, text: message });
-      return 'shared';
-    } catch {
-      // user cancelled the native share sheet — fall through to download
-    }
-  }
-
+): Promise<'downloaded'> {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;

@@ -73,12 +73,8 @@ export default function RecordsPage() {
       const receiptNo = donationReceiptNumber(data, entry);
       const message = `Donation receipt ${receiptNo} for ₹${entry.amount} — thank you${entry.partyName ? ', ' + entry.partyName : ''}! Please find the receipt attached.`;
       const filename = `donation-receipt-${(entry.partyName || 'donor').replace(/\s+/g, '-')}.pdf`;
-      const result = await shareReceiptOnWhatsApp(entry.partyPhone, blob, filename, message);
-      showToast(
-        result === 'shared'
-          ? 'Receipt shared.'
-          : 'Receipt downloaded and WhatsApp opened — attach the file to send it.'
-      );
+      await shareReceiptOnWhatsApp(entry.partyPhone, blob, filename, message);
+      showToast('Receipt downloaded and their WhatsApp chat opened — attach the file to send it.');
     } catch (err) {
       console.error('Receipt generation failed:', err);
       showToast('Could not generate the receipt — please try again or report this.');

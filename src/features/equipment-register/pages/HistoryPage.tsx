@@ -85,12 +85,8 @@ export default function HistoryPage() {
       const itemDesc = group.length > 1 ? `${group.length} items` : type ? type.name : 'equipment';
       const message = `Security deposit receipt for ${itemDesc} — ${allocation.patientName}. Please find the receipt attached.`;
       const filename = `receipt-${allocation.patientName.replace(/\s+/g, '-')}.pdf`;
-      const result = await shareReceiptOnWhatsApp(allocation.patientPhone, blob, filename, message);
-      showToast(
-        result === 'shared'
-          ? 'Receipt shared.'
-          : 'Receipt downloaded and WhatsApp opened — attach the file to send it.'
-      );
+      await shareReceiptOnWhatsApp(allocation.patientPhone, blob, filename, message);
+      showToast('Receipt downloaded and their WhatsApp chat opened — attach the file to send it.');
     } catch (err) {
       console.error('Receipt generation failed:', err);
       showToast('Could not generate the receipt — please try again or report this.');
