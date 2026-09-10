@@ -5,6 +5,7 @@ import { allocationsInGroup, fmtDate, todayStr, typeById, unitById } from '../he
 import { useToast } from '@/shared/components/ui/Toast';
 import { useAuth } from '@/shared/components/AuthGate';
 import PdfPreviewModal from '@/shared/components/PdfPreviewModal';
+import WhatsAppShareButton from '@/shared/components/WhatsAppShareButton';
 import { logActivity } from '@/shared/lib/activityLog';
 
 export default function ActiveLoansPage() {
@@ -255,9 +256,7 @@ export default function ActiveLoansPage() {
                             <button type="button" className="btn small secondary" onClick={() => handleViewReceipt(a.id)}>
                               View
                             </button>
-                            <button type="button" className="btn small secondary" onClick={() => handleSendReceipt(a.id)}>
-                              Share
-                            </button>
+                            <WhatsAppShareButton phone={a.patientPhone} onShare={() => handleSendReceipt(a.id)} />
                           </>
                         )}
                         <Link to={`/equipment-register/edit/${a.id}`} className="btn small secondary">

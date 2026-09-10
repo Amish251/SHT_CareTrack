@@ -460,6 +460,9 @@ input:disabled, select:disabled, textarea:disabled { opacity: .6; cursor: not-al
 .btn.danger:hover { background: var(--rust); color: #fff; }
 .btn.ghost { background: transparent; border: 1px solid transparent; color: var(--primary-deep); padding: 6px 8px; }
 .btn.ghost:hover { background: rgba(31, 111, 178, 0.08); }
+.btn.whatsapp { background: #25D366; color: #fff; }
+.btn.whatsapp:hover { background: #1DA851; color: #fff; }
+.btn.whatsapp:disabled, .btn.whatsapp:disabled:hover { background: #25D366; opacity: .5; }
 .btn.small { padding: 6px 12px; font-size: 12px; }
 button.btn:disabled { opacity: .55; cursor: not-allowed; }
 button.btn:disabled:hover { background: var(--primary); }

@@ -4,6 +4,7 @@ import { useEquipmentData } from '../store';
 import { allocationsInGroup, fmtDate, typeById, unitById } from '../helpers';
 import { useToast } from '@/shared/components/ui/Toast';
 import PdfPreviewModal from '@/shared/components/PdfPreviewModal';
+import WhatsAppShareButton from '@/shared/components/WhatsAppShareButton';
 
 export default function HistoryPage() {
   const [data, update] = useEquipmentData();
@@ -188,9 +189,7 @@ export default function HistoryPage() {
                             <button type="button" className="btn small secondary" onClick={() => handleViewReceipt(a.id)}>
                               View
                             </button>
-                            <button type="button" className="btn small secondary" onClick={() => handleSendReceipt(a.id)}>
-                              Share
-                            </button>
+                            <WhatsAppShareButton phone={a.patientPhone} onShare={() => handleSendReceipt(a.id)} />
                           </>
                         )}
                         <Link to={`/equipment-register/edit/${a.id}`} className="btn small secondary">

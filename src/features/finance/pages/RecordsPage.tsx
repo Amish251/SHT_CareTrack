@@ -5,6 +5,7 @@ import { donationReceiptNumber } from '../helpers';
 import { fmtDate } from '@/features/equipment-register/helpers';
 import { useToast } from '@/shared/components/ui/Toast';
 import PdfPreviewModal from '@/shared/components/PdfPreviewModal';
+import WhatsAppShareButton from '@/shared/components/WhatsAppShareButton';
 import { logActivity } from '@/shared/lib/activityLog';
 
 export default function RecordsPage() {
@@ -150,9 +151,7 @@ export default function RecordsPage() {
                           <button type="button" className="btn small secondary" onClick={() => handleViewReceipt(e.id)}>
                             View
                           </button>
-                          <button type="button" className="btn small secondary" onClick={() => handleSendReceipt(e.id)}>
-                            Share
-                          </button>
+                          <WhatsAppShareButton phone={e.partyPhone} onShare={() => handleSendReceipt(e.id)} />
                         </>
                       )}
                       <button type="button" className="btn small danger" onClick={() => handleDelete(e.id)}>
