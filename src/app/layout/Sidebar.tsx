@@ -48,6 +48,28 @@ const NAV_ITEMS: NavItem[] = [
     ]
   },
   {
+    to: '/ambaji-account',
+    label: 'Ambaji Account',
+    tag: 'AM',
+    adminOnly: true,
+    children: [
+      { to: '/ambaji-account', label: 'Overview', tag: '01', end: true },
+      { to: '/ambaji-account/add', label: 'Add Entry', tag: '02' },
+      { to: '/ambaji-account/records', label: 'All Records', tag: '03' }
+    ]
+  },
+  {
+    to: '/seoc-account',
+    label: 'SEOC Account',
+    tag: 'SO',
+    adminOnly: true,
+    children: [
+      { to: '/seoc-account', label: 'Overview', tag: '01', end: true },
+      { to: '/seoc-account/add', label: 'Add Entry', tag: '02' },
+      { to: '/seoc-account/records', label: 'All Records', tag: '03' }
+    ]
+  },
+  {
     to: '/settings',
     label: 'Settings',
     tag: 'ST',

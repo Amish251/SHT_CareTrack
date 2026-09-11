@@ -108,6 +108,61 @@ create policy "app_data_finance_update" on public.app_data
   )
   with check (namespace = 'finance');
 
+-- Ambaji Account & SEOC Account (credit/debit ledgers): admin and super admin
+-- only, same gating as Donation/finance — these are separate accountancy
+-- books, each its own namespace so they never mix with each other or with
+-- Donation. If a third named account ledger is ever added, copy this
+-- six-policy block and swap the namespace string.
+drop policy if exists "app_data_ambaji_select" on public.app_data;
+create policy "app_data_ambaji_select" on public.app_data
+  for select
+  using (
+    namespace = 'ambaji-account'
+    and exists (select 1 from public.profiles p where p.id = auth.uid() and p.role in ('admin', 'superadmin'))
+  );
+
+drop policy if exists "app_data_ambaji_upsert" on public.app_data;
+create policy "app_data_ambaji_upsert" on public.app_data
+  for insert
+  with check (
+    namespace = 'ambaji-account'
+    and exists (select 1 from public.profiles p where p.id = auth.uid() and p.role in ('admin', 'superadmin'))
+  );
+
+drop policy if exists "app_data_ambaji_update" on public.app_data;
+create policy "app_data_ambaji_update" on public.app_data
+  for update
+  using (
+    namespace = 'ambaji-account'
+    and exists (select 1 from public.profiles p where p.id = auth.uid() and p.role in ('admin', 'superadmin'))
+  )
+  with check (namespace = 'ambaji-account');
+
+drop policy if exists "app_data_seoc_select" on public.app_data;
+create policy "app_data_seoc_select" on public.app_data
+  for select
+  using (
+    namespace = 'seoc-account'
+    and exists (select 1 from public.profiles p where p.id = auth.uid() and p.role in ('admin', 'superadmin'))
+  );
+
+drop policy if exists "app_data_seoc_upsert" on public.app_data;
+create policy "app_data_seoc_upsert" on public.app_data
+  for insert
+  with check (
+    namespace = 'seoc-account'
+    and exists (select 1 from public.profiles p where p.id = auth.uid() and p.role in ('admin', 'superadmin'))
+  );
+
+drop policy if exists "app_data_seoc_update" on public.app_data;
+create policy "app_data_seoc_update" on public.app_data
+  for update
+  using (
+    namespace = 'seoc-account'
+    and exists (select 1 from public.profiles p where p.id = auth.uid() and p.role in ('admin', 'superadmin'))
+  )
+  with check (namespace = 'seoc-account');
+
 -- Keep updated_at honest on every write, regardless of what the client sends.
 create or replace function public.touch_app_data_updated_at()
 returns trigger as $$
@@ -127,7 +182,9 @@ create trigger app_data_touch_updated_at
 insert into public.app_data (namespace, data)
 values
   ('equipment-register', '{"types": [], "allocations": []}'::jsonb),
-  ('finance', '{"entries": []}'::jsonb)
+  ('finance', '{"entries": []}'::jsonb),
+  ('ambaji-account', '{"entries": []}'::jsonb),
+  ('seoc-account', '{"entries": []}'::jsonb)
 on conflict (namespace) do nothing;
 
 -- ----------------------------------------------------------------------------
