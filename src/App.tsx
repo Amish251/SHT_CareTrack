@@ -12,6 +12,12 @@ import EditAllocationPage from './features/equipment-register/pages/EditAllocati
 import FinanceOverviewPage from './features/finance/pages/OverviewPage';
 import AddEntryPage from './features/finance/pages/AddEntryPage';
 import FinanceRecordsPage from './features/finance/pages/RecordsPage';
+import AmbajiOverviewPage from './features/accounts/ambaji/OverviewPage';
+import AmbajiAddEntryPage from './features/accounts/ambaji/AddEntryPage';
+import AmbajiRecordsPage from './features/accounts/ambaji/RecordsPage';
+import SeocOverviewPage from './features/accounts/seoc/OverviewPage';
+import SeocAddEntryPage from './features/accounts/seoc/AddEntryPage';
+import SeocRecordsPage from './features/accounts/seoc/RecordsPage';
 import UsersPage from './features/settings/pages/UsersPage';
 import ProfilePage from './features/settings/pages/ProfilePage';
 import BackupPage from './features/settings/pages/BackupPage';
@@ -86,6 +92,60 @@ export default function App() {
           element={
             <AdminOnly message="Donation records are limited to admin accounts.">
               <FinanceRecordsPage />
+            </AdminOnly>
+          }
+        />
+
+        {/* Ambaji Account — its own credit/debit ledger, admin-only, fully isolated
+            from Donation and from SEOC Account (separate Supabase namespace/table row). */}
+        <Route
+          path="/ambaji-account"
+          element={
+            <AdminOnly message="Ambaji Account is limited to admin accounts.">
+              <AmbajiOverviewPage />
+            </AdminOnly>
+          }
+        />
+        <Route
+          path="/ambaji-account/add"
+          element={
+            <AdminOnly message="Ambaji Account is limited to admin accounts.">
+              <AmbajiAddEntryPage />
+            </AdminOnly>
+          }
+        />
+        <Route
+          path="/ambaji-account/records"
+          element={
+            <AdminOnly message="Ambaji Account is limited to admin accounts.">
+              <AmbajiRecordsPage />
+            </AdminOnly>
+          }
+        />
+
+        {/* SEOC Account — its own credit/debit ledger, admin-only, fully isolated
+            from Donation and from Ambaji Account (separate Supabase namespace/table row). */}
+        <Route
+          path="/seoc-account"
+          element={
+            <AdminOnly message="SEOC Account is limited to admin accounts.">
+              <SeocOverviewPage />
+            </AdminOnly>
+          }
+        />
+        <Route
+          path="/seoc-account/add"
+          element={
+            <AdminOnly message="SEOC Account is limited to admin accounts.">
+              <SeocAddEntryPage />
+            </AdminOnly>
+          }
+        />
+        <Route
+          path="/seoc-account/records"
+          element={
+            <AdminOnly message="SEOC Account is limited to admin accounts.">
+              <SeocRecordsPage />
             </AdminOnly>
           }
         />
