@@ -1184,3 +1184,58 @@ the same way (one more sizeable feature could tip it over) — the fix
 if it comes up is route-level code-splitting (`React.lazy` per page in
 `App.tsx`), not something done yet since the app has never actually
 hit the warning.
+
+### This session (follow-up) — fixed a real bug in schema.sql itself
+
+The person hit an actual SQL error re-running `schema.sql` in the
+Supabase SQL Editor to add the Ambaji/SEOC policies above. Root cause
+found: **the earlier claim that "every statement in this file is safe
+to re-run" was wrong for one line.**
+
+```sql
+alter publication supabase_realtime add table public.app_data;
+```
+
+Unlike every other statement in the file, `ALTER PUBLICATION ... ADD
+TABLE` has no `IF NOT EXISTS` equivalent in Postgres. Since the
+person's Supabase project already had this run once during initial
+setup, re-running the whole file threw:
+
+```
+ERROR: 42710: relation "app_data" is already member of publication "supabase_realtime"
+```
+
+Because the Supabase SQL Editor runs a pasted multi-statement script
+as one transaction, an error on this near-the-end line most likely
+rolled back everything earlier in that same run too — including the
+new Ambaji/SEOC policies the person was actually trying to add. So the
+fix isn't just "skip that line next time," it's "the whole script
+needs re-running now that it's actually fixed."
+
+**Fix applied:** wrapped that line in a existence check against
+`pg_publication_tables` before running it:
+
+```sql
+do $$
+begin
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'app_data'
+  ) then
+    alter publication supabase_realtime add table public.app_data;
+  end if;
+end $$;
+```
+
+`schema.sql`'s opening comment ("safe to re-run") is now actually true
+for the whole file, not just everything except this one line. Gave
+the person the corrected file directly to paste and re-run.
+
+**Lesson for future sessions touching `schema.sql`:** don't assume a
+SQL statement is idempotent just because the surrounding ones are —
+check each one specifically. `CREATE ... IF NOT EXISTS`, `DROP ... IF
+EXISTS`, `CREATE OR REPLACE`, and `ON CONFLICT DO NOTHING` all have
+that safety built in; plain `ALTER PUBLICATION`, among others, does
+not.

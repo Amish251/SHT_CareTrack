@@ -227,8 +227,24 @@ create index if not exists activity_log_created_at_idx on public.activity_log (c
 -- 4. Realtime — lets every open tab/device see equipment and donation
 --    changes made elsewhere within about a second, without a manual
 --    refresh. Optional but recommended for a multi-device team.
+--    Guarded with a existence check because, unlike every other statement
+--    in this file, "alter publication ... add table" has no built-in
+--    IF NOT EXISTS — re-running it unguarded on a project where it already
+--    ran throws: ERROR 42710 "relation app_data is already member of
+--    publication supabase_realtime". This is what made re-running the
+--    whole file unsafe before; it's fixed now.
 -- ----------------------------------------------------------------------------
-alter publication supabase_realtime add table public.app_data;
+do $$
+begin
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'app_data'
+  ) then
+    alter publication supabase_realtime add table public.app_data;
+  end if;
+end $$;
 
 -- ============================================================================
 -- After running this file, go create the two starter logins (the app no
