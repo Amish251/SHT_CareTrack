@@ -10,6 +10,7 @@ import {
   type AccountPaymentMode
 } from '../types';
 import type { AccountConfig } from '../config';
+import { categoryDisplay } from '../helpers';
 import { uid } from '@/shared/lib/storage';
 import { useToast } from '@/shared/components/ui/Toast';
 import { useAuth } from '@/shared/components/AuthGate';
@@ -26,6 +27,7 @@ export default function AccountAddEntry({ config }: { config: AccountConfig }) {
 
   const [kind, setKind] = useState<AccountEntryKind>('credit');
   const [category, setCategory] = useState(CREDIT_CATEGORIES[0]);
+  const [categoryNote, setCategoryNote] = useState('');
   const [amount, setAmount] = useState('');
   const [partyName, setPartyName] = useState('');
   const [partyPhone, setPartyPhone] = useState('');
@@ -39,12 +41,22 @@ export default function AccountAddEntry({ config }: { config: AccountConfig }) {
   function handleKindChange(next: AccountEntryKind) {
     setKind(next);
     setCategory(next === 'credit' ? CREDIT_CATEGORIES[0] : DEBIT_CATEGORIES[0]);
+    setCategoryNote('');
+  }
+
+  function handleCategoryChange(next: string) {
+    setCategory(next);
+    if (next !== 'Other') setCategoryNote('');
   }
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
     const amt = parseFloat(amount);
     if (Number.isNaN(amt) || amt <= 0 || !date) return;
+    if (category === 'Other' && !categoryNote.trim()) {
+      showToast('Please specify what "Other" means for this entry.');
+      return;
+    }
 
     update((prev) => ({
       entries: [
@@ -53,6 +65,7 @@ export default function AccountAddEntry({ config }: { config: AccountConfig }) {
           id: uid('acct'),
           kind,
           category,
+          categoryNote: category === 'Other' ? categoryNote.trim() : '',
           amount: amt,
           partyName: partyName.trim(),
           partyPhone: partyPhone.trim(),
@@ -83,6 +96,7 @@ export default function AccountAddEntry({ config }: { config: AccountConfig }) {
         const rowKind: AccountEntryKind = kindRaw === 'debit' ? 'debit' : 'credit';
         const rowCategory =
           pickField(row, 'Category', 'Purpose').trim() || (rowKind === 'credit' ? 'Other Income' : 'Other Expense');
+        const rowCategoryNote = pickField(row, 'CategoryNote', 'Category Note', 'OtherDetail', 'Other Detail').trim();
         const amt = parseFloat(pickField(row, 'Amount'));
         const rowPartyName = pickField(row, 'PartyName', 'Party Name', 'Name').trim();
         const rowPartyPhone = pickField(row, 'PartyPhone', 'Party Phone', 'Phone', 'Contact').trim();
@@ -103,6 +117,7 @@ export default function AccountAddEntry({ config }: { config: AccountConfig }) {
           id: uid('acct'),
           kind: rowKind,
           category: rowCategory,
+          categoryNote: rowCategory === 'Other' ? rowCategoryNote : '',
           amount: amt,
           partyName: rowPartyName,
           partyPhone: rowPartyPhone,
@@ -133,10 +148,21 @@ export default function AccountAddEntry({ config }: { config: AccountConfig }) {
         <ImportExportBar
           entityLabel={`${config.title} entries`}
           sampleFilename={`${config.slug}-sample.xlsx`}
-          sampleHeaders={['Kind', 'Category', 'Amount', 'PartyName', 'PartyPhone', 'Date', 'PaymentMode', 'HandledBy', 'Notes']}
+          sampleHeaders={[
+            'Kind',
+            'Category',
+            'CategoryNote',
+            'Amount',
+            'PartyName',
+            'PartyPhone',
+            'Date',
+            'PaymentMode',
+            'HandledBy',
+            'Notes'
+          ]}
           sampleRows={[
-            ['credit', 'Donation', 1000, 'Rajesh Shah', '9898989898', '2026-09-01', 'UPI', 'Amish Patel', 'Diwali donation'],
-            ['debit', 'Transport', 350, 'Auto fare', '', '2026-09-02', 'Cash', 'Amish Patel', 'Site visit']
+            ['credit', 'Donation', '', 1000, 'Rajesh Shah', '9898989898', '2026-09-01', 'UPI', 'Amish Patel', 'Diwali donation'],
+            ['debit', 'Other', 'Printing pamphlets', 350, 'Local Press', '', '2026-09-02', 'Cash', 'Amish Patel', 'Event material']
           ]}
           onImportRows={handleImportEntries}
           exportFilenameBase={`${config.slug}-entries`}
@@ -146,7 +172,7 @@ export default function AccountAddEntry({ config }: { config: AccountConfig }) {
             data.entries.map((e) => [
               e.date,
               e.kind === 'credit' ? 'Credit' : 'Debit',
-              e.category,
+              categoryDisplay(e),
               e.partyName || '—',
               e.partyPhone || '—',
               e.amount,
@@ -167,7 +193,7 @@ export default function AccountAddEntry({ config }: { config: AccountConfig }) {
             </div>
             <div>
               <label htmlFor="acct-category">Category</label>
-              <select id="acct-category" value={category} onChange={(e) => setCategory(e.target.value)}>
+              <select id="acct-category" value={category} onChange={(e) => handleCategoryChange(e.target.value)}>
                 {categories.map((c) => (
                   <option key={c} value={c}>
                     {c}
@@ -175,6 +201,19 @@ export default function AccountAddEntry({ config }: { config: AccountConfig }) {
                 ))}
               </select>
             </div>
+            {category === 'Other' && (
+              <div>
+                <label htmlFor="acct-category-note">Please specify</label>
+                <input
+                  type="text"
+                  id="acct-category-note"
+                  required
+                  placeholder="What is this for?"
+                  value={categoryNote}
+                  onChange={(e) => setCategoryNote(e.target.value)}
+                />
+              </div>
+            )}
             <div>
               <label htmlFor="acct-amount">Amount (₹)</label>
               <input

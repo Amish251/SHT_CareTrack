@@ -3,6 +3,9 @@ import type { Allocation, EquipmentRegisterData } from '@/features/equipment-reg
 import { fmtDate, todayStr, typeById, unitById } from '@/features/equipment-register/helpers';
 import type { FinanceData, FinanceEntry } from '@/features/finance/types';
 import { donationReceiptNumber } from '@/features/finance/helpers';
+import type { AccountConfig } from '@/features/accounts/config';
+import type { AccountEntry, AccountLedgerData } from '@/features/accounts/types';
+import { accountReceiptNumber, categoryDisplay } from '@/features/accounts/helpers';
 import { amountInWords } from '@/shared/lib/numberWords';
 
 const TRUST_NAME = 'Show Humanity Trust';
@@ -276,6 +279,77 @@ export async function buildDonationReceiptPdf(entry: FinanceEntry, data: Finance
 
   r.signatureBlock(
     `With sincere thanks for this contribution towards ${TRUST_NAME}'s work. This receipt is issued for record-keeping purposes.`
+  );
+
+  return doc.output('blob');
+}
+
+/**
+ * Builds a credit receipt for one of the named account ledgers (Ambaji
+ * Account, SEOC Account, or any future one in `ACCOUNTS`) — same visual
+ * style as the donation receipt, but scoped to that account: its own
+ * receipt-number series (so Ambaji and SEOC numbering never collide) and
+ * the account's name printed as its own line so it's clear which book this
+ * money was recorded against. Only credit entries get a receipt — debits
+ * (expenses) don't have one, same as expenses in the Donation module.
+ */
+export async function buildAccountReceiptPdf(
+  entry: AccountEntry,
+  data: AccountLedgerData,
+  config: AccountConfig
+): Promise<Blob> {
+  const receiptNo = accountReceiptNumber(data, entry, config);
+  const r = new Receipt();
+  const logo = await loadLogoDataUrl();
+  await r.drawHeader('Credit Receipt', receiptNo, logo);
+  const { doc, marginX, rightEdge } = r;
+
+  r.row('Account:', config.title);
+  r.row('Received from:', entry.partyName || '—');
+  if (entry.partyPhone) r.row('Contact number:', entry.partyPhone);
+  r.row('Category:', categoryDisplay(entry));
+  r.row('Payment mode:', entry.paymentMode || '—');
+
+  r.y += 6;
+  const boxY = r.y;
+  doc.setFillColor(245, 249, 252);
+  doc.rect(marginX, boxY, rightEdge - marginX, 46, 'F');
+  doc.setDrawColor(180, 190, 200);
+  doc.setLineWidth(0.8);
+  doc.rect(marginX, boxY, rightEdge - marginX, 46);
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10);
+  doc.setTextColor(53, 87, 122);
+  doc.text('AMOUNT RECEIVED', marginX + 10, boxY + 18);
+  doc.setFontSize(15);
+  doc.text(`Rs. ${entry.amount.toLocaleString('en-IN')}`, rightEdge - 10, boxY + 19, { align: 'right' });
+  doc.setFont('helvetica', 'italic');
+  doc.setFontSize(9);
+  doc.setTextColor(98, 120, 141);
+  doc.text(amountInWords(entry.amount), marginX + 10, boxY + 34);
+  doc.setTextColor(0, 0, 0);
+  r.y = boxY + 46 + 24;
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10.5);
+  doc.text('Received by:', marginX, r.y);
+  doc.setFont('helvetica', 'normal');
+  doc.text(entry.handledBy || '—', marginX + 150, r.y);
+  r.y += 22;
+
+  if (entry.notes) {
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9.5);
+    doc.setTextColor(98, 120, 141);
+    const noteLines = doc.splitTextToSize(`Note: ${entry.notes}`, rightEdge - marginX);
+    doc.text(noteLines, marginX, r.y);
+    doc.setTextColor(0, 0, 0);
+    r.y += noteLines.length * 12 + 10;
+  }
+
+  r.signatureBlock(
+    `With sincere thanks for this contribution towards ${config.title}. This receipt is issued for record-keeping purposes.`
   );
 
   return doc.output('blob');

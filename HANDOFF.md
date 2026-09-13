@@ -1239,3 +1239,59 @@ check each one specifically. `CREATE ... IF NOT EXISTS`, `DROP ... IF
 EXISTS`, `CREATE OR REPLACE`, and `ON CONFLICT DO NOTHING` all have
 that safety built in; plain `ALTER PUBLICATION`, among others, does
 not.
+
+### This session (follow-up 2) — PDF receipts + a custom "Other" category field, both scoped to Ambaji/SEOC only
+
+Two asks, both scoped explicitly to the two account ledgers (not
+Donation, which the person didn't mention this time):
+
+1. **PDF receipts for credit entries.** Added
+   `buildAccountReceiptPdf(entry, data, config)` to `receipt.ts` —
+   same visual style as the existing donation receipt (logo header,
+   amount in figures and words, signature block), but generic over
+   `AccountConfig` so it works for either account. Each account gets
+   its own receipt-number series (`SHT/AMB/0001…`, `SHT/SEOC/0001…`
+   — see `accountReceiptNumber` in the new `accounts/helpers.ts`) so
+   the two never collide or share a counter. **Only credit entries get
+   a receipt** — debits (expenses) don't, matching exactly how the
+   Donation module already only receipts `kind === 'donation'` and not
+   `'expense'`. Wired into `AccountRecords.tsx` with the same
+   View/Share-on-WhatsApp buttons and `PdfPreviewModal` the Donation
+   records table already uses — visually and behaviorally identical
+   pattern, just pointed at the new function.
+2. **Custom text field when "Other" is selected.** Added
+   `categoryNote: string` to `AccountEntry`. In `AccountAddEntry.tsx`,
+   selecting "Other" in the category dropdown reveals a required
+   "Please specify" text field immediately after it (and hides again,
+   clearing itself, if the person picks a different category or
+   switches Credit/Debit). That note is what actually gets shown
+   everywhere "Other" would otherwise appear as a meaningless bare
+   word: the Overview's recent-entries table, the Records table, the
+   Excel/PDF ledger export, and the individual credit receipt PDF —
+   all via one shared `categoryDisplay()` helper (`accounts/helpers.ts`)
+   so there's exactly one place that formatting rule lives, not four
+   copies of `category === 'Other' ? ... : ...`. Shows as
+   `"Other — <what they typed>"`. Also added a `CategoryNote` column to
+   the Excel import/sample-file format for bulk-adding entries with a
+   custom "Other" category.
+
+**Deliberately NOT touched:** the Donation module. The person's
+request named "Ambaji and SEOC screen" specifically; Donation's
+category dropdown also has an "Other" option today with no custom-note
+field, which is now visibly inconsistent with the two newer modules.
+Left as-is rather than assumed — worth asking the person directly
+whether they want the same "Other" note field added to Donation for
+consistency, since that would touch a module they didn't ask about
+this time.
+
+**Verification:** `npm run build` clean, `tsc -b` clean, main JS chunk
+unchanged (~487 kB, still under the warning threshold — `receipt.ts`'s
+new function added negligible weight since the whole file is already
+one dynamically-imported chunk, separate from the `jspdf`/`xlsx`
+chunks it pulls in on demand). **Not tested against a live Supabase
+project or in a real browser** — same standing limitation as every
+session before this one. Real verification once deployed: add a
+credit entry to Ambaji Account with category "Other" and a note,
+confirm the note shows correctly in Overview/Records/exported
+Excel+PDF and on the generated receipt PDF; confirm a debit entry
+never shows a receipt button regardless of category.

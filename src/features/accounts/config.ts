@@ -7,9 +7,11 @@ export interface AccountConfig {
   title: string;
   /** Short sidebar tag, matching the style of other modules (ER, DN, ST). */
   tag: string;
+  /** Short code used in generated receipt numbers, e.g. "AMB" → SHT/AMB/0001. */
+  receiptPrefix: string;
 }
 
 export const ACCOUNTS: Record<'ambaji' | 'seoc', AccountConfig> = {
-  ambaji: { namespace: 'ambaji-account', slug: 'ambaji-account', title: 'Ambaji Account', tag: 'AM' },
-  seoc: { namespace: 'seoc-account', slug: 'seoc-account', title: 'SEOC Account', tag: 'SO' }
+  ambaji: { namespace: 'ambaji-account', slug: 'ambaji-account', title: 'Ambaji Account', tag: 'AM', receiptPrefix: 'AMB' },
+  seoc: { namespace: 'seoc-account', slug: 'seoc-account', title: 'SEOC Account', tag: 'SO', receiptPrefix: 'SEOC' }
 };

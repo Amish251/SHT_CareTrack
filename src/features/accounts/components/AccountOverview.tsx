@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useAccountData } from '../store';
 import type { AccountConfig } from '../config';
+import { categoryDisplay } from '../helpers';
 import { fmtDate } from '@/features/equipment-register/helpers';
 
 export default function AccountOverview({ config }: { config: AccountConfig }) {
@@ -75,7 +76,7 @@ export default function AccountOverview({ config }: { config: AccountConfig }) {
                       {e.kind === 'credit' ? 'Credit' : 'Debit'}
                     </span>
                   </td>
-                  <td>{e.category}</td>
+                  <td>{categoryDisplay(e)}</td>
                   <td>{e.partyName || '—'}</td>
                   <td className="mono">₹{e.amount.toLocaleString('en-IN')}</td>
                 </tr>

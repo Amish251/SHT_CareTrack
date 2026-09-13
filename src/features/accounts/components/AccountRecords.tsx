@@ -2,15 +2,19 @@ import { useMemo, useState } from 'react';
 import { useAccountData } from '../store';
 import type { AccountEntryKind } from '../types';
 import type { AccountConfig } from '../config';
+import { accountReceiptNumber, categoryDisplay } from '../helpers';
 import { fmtDate } from '@/features/equipment-register/helpers';
 import { useToast } from '@/shared/components/ui/Toast';
 import { logActivity } from '@/shared/lib/activityLog';
+import PdfPreviewModal from '@/shared/components/PdfPreviewModal';
+import WhatsAppShareButton from '@/shared/components/WhatsAppShareButton';
 
 export default function AccountRecords({ config }: { config: AccountConfig }) {
   const [data, update] = useAccountData(config.namespace);
   const { showToast } = useToast();
   const [query, setQuery] = useState('');
   const [kindFilter, setKindFilter] = useState<'' | AccountEntryKind>('');
+  const [preview, setPreview] = useState<{ url: string; title: string } | null>(null);
 
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -20,7 +24,7 @@ export default function AccountRecords({ config }: { config: AccountConfig }) {
       .filter((e) => {
         if (kindFilter && e.kind !== kindFilter) return false;
         if (q) {
-          const hay = `${e.partyName} ${e.category} ${e.notes}`.toLowerCase();
+          const hay = `${e.partyName} ${categoryDisplay(e)} ${e.notes}`.toLowerCase();
           if (!hay.includes(q)) return false;
         }
         return true;
@@ -38,6 +42,44 @@ export default function AccountRecords({ config }: { config: AccountConfig }) {
       );
     }
     showToast('Entry deleted.');
+  }
+
+  function closePreview() {
+    if (preview) URL.revokeObjectURL(preview.url);
+    setPreview(null);
+  }
+
+  async function handleViewReceipt(id: string) {
+    const entry = data.entries.find((e) => e.id === id);
+    if (!entry) return;
+    showToast('Preparing receipt…');
+    try {
+      const { buildAccountReceiptPdf } = await import('@/shared/lib/receipt');
+      const blob = await buildAccountReceiptPdf(entry, data, config);
+      const url = URL.createObjectURL(blob);
+      setPreview({ url, title: `Receipt — ${entry.partyName || config.title}` });
+    } catch (err) {
+      console.error('Receipt generation failed:', err);
+      showToast('Could not generate the receipt — please try again or report this.');
+    }
+  }
+
+  async function handleSendReceipt(id: string) {
+    const entry = data.entries.find((e) => e.id === id);
+    if (!entry) return;
+    showToast('Preparing receipt…');
+    try {
+      const { buildAccountReceiptPdf, shareReceiptOnWhatsApp } = await import('@/shared/lib/receipt');
+      const blob = await buildAccountReceiptPdf(entry, data, config);
+      const receiptNo = accountReceiptNumber(data, entry, config);
+      const message = `${config.title} receipt ${receiptNo} for ₹${entry.amount} — thank you${entry.partyName ? ', ' + entry.partyName : ''}! Please find the receipt attached.`;
+      const filename = `${config.slug}-receipt-${(entry.partyName || 'entry').replace(/\s+/g, '-')}.pdf`;
+      await shareReceiptOnWhatsApp(entry.partyPhone, blob, filename, message);
+      showToast('Receipt downloaded and their WhatsApp chat opened — attach the file to send it.');
+    } catch (err) {
+      console.error('Receipt generation failed:', err);
+      showToast('Could not generate the receipt — please try again or report this.');
+    }
   }
 
   return (
@@ -92,7 +134,7 @@ export default function AccountRecords({ config }: { config: AccountConfig }) {
                       {e.kind === 'credit' ? 'Credit' : 'Debit'}
                     </span>
                   </td>
-                  <td>{e.category}</td>
+                  <td>{categoryDisplay(e)}</td>
                   <td>
                     {e.partyName || '—'}
                     {e.partyPhone && <div style={{ fontSize: 11, color: 'var(--slate)' }}>{e.partyPhone}</div>}
@@ -101,6 +143,14 @@ export default function AccountRecords({ config }: { config: AccountConfig }) {
                   <td style={{ maxWidth: 220, color: 'var(--slate)', fontSize: 12 }}>{e.notes || '—'}</td>
                   <td>
                     <div className="row-actions">
+                      {e.kind === 'credit' && (
+                        <>
+                          <button type="button" className="btn small secondary" onClick={() => handleViewReceipt(e.id)}>
+                            View
+                          </button>
+                          <WhatsAppShareButton phone={e.partyPhone} onShare={() => handleSendReceipt(e.id)} />
+                        </>
+                      )}
                       <button type="button" className="btn small danger" onClick={() => handleDelete(e.id)}>
                         Delete
                       </button>
@@ -112,6 +162,8 @@ export default function AccountRecords({ config }: { config: AccountConfig }) {
           </tbody>
         </table>
       </div>
+
+      {preview && <PdfPreviewModal url={preview.url} title={preview.title} onClose={closePreview} />}
     </div>
   );
 }
