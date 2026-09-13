@@ -35,6 +35,7 @@ export default function AddEntryPage() {
   const [paymentMode, setPaymentMode] = useState<PaymentMode>('Cash');
   const [receivedBy, setReceivedBy] = useState(session.username);
   const [notes, setNotes] = useState('');
+  const [saving, setSaving] = useState(false);
 
   const categories = kind === 'donation' ? DONATION_CATEGORIES : EXPENSE_CATEGORIES;
 
@@ -49,7 +50,7 @@ export default function AddEntryPage() {
     if (!isOtherCategory(next)) setCategoryNote('');
   }
 
-  function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     const amt = parseFloat(amount);
     if (Number.isNaN(amt) || amt <= 0 || !date) return;
@@ -58,24 +59,32 @@ export default function AddEntryPage() {
       return;
     }
 
-    update((prev) => ({
-      entries: [
-        ...prev.entries,
-        {
-          id: uid('fin'),
-          kind,
-          category,
-          categoryNote: isOtherCategory(category) ? categoryNote.trim() : '',
-          amount: amt,
-          partyName: partyName.trim(),
-          partyPhone: partyPhone.trim(),
-          date,
-          paymentMode,
-          receivedBy: receivedBy.trim(),
-          notes: notes.trim()
-        }
-      ]
-    }));
+    setSaving(true);
+    try {
+      await update((prev) => ({
+        entries: [
+          ...prev.entries,
+          {
+            id: uid('fin'),
+            kind,
+            category,
+            categoryNote: isOtherCategory(category) ? categoryNote.trim() : '',
+            amount: amt,
+            partyName: partyName.trim(),
+            partyPhone: partyPhone.trim(),
+            date,
+            paymentMode,
+            receivedBy: receivedBy.trim(),
+            notes: notes.trim()
+          }
+        ]
+      }));
+    } catch {
+      setSaving(false);
+      showToast('Could not save — check your connection and try again.');
+      return;
+    }
+    setSaving(false);
 
     showToast(
       kind === 'donation'
@@ -302,8 +311,8 @@ export default function AddEntryPage() {
             </div>
           </div>
 
-          <button type="submit" className="btn">
-            Save entry
+          <button type="submit" className="btn" disabled={saving}>
+            {saving ? 'Saving…' : 'Save entry'}
           </button>
         </form>
       </div>

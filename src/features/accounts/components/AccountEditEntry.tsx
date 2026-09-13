@@ -39,6 +39,7 @@ export default function AccountEditEntry({ config }: { config: AccountConfig }) 
   const [paymentMode, setPaymentMode] = useState<AccountPaymentMode>('Cash');
   const [handledBy, setHandledBy] = useState('');
   const [notes, setNotes] = useState('');
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (!entry) return;
@@ -79,7 +80,7 @@ export default function AccountEditEntry({ config }: { config: AccountConfig }) 
     if (!isOtherCategory(next)) setCategoryNote('');
   }
 
-  function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (!entry) return;
     const amt = parseFloat(amount);
@@ -89,25 +90,33 @@ export default function AccountEditEntry({ config }: { config: AccountConfig }) 
       return;
     }
 
-    update((prev) => ({
-      entries: prev.entries.map((e) =>
-        e.id !== entry.id
-          ? e
-          : {
-              ...e,
-              kind,
-              category,
-              categoryNote: isOtherCategory(category) ? categoryNote.trim() : '',
-              amount: amt,
-              partyName: partyName.trim(),
-              partyPhone: partyPhone.trim(),
-              date,
-              paymentMode,
-              handledBy: handledBy.trim(),
-              notes: notes.trim()
-            }
-      )
-    }));
+    setSaving(true);
+    try {
+      await update((prev) => ({
+        entries: prev.entries.map((e) =>
+          e.id !== entry.id
+            ? e
+            : {
+                ...e,
+                kind,
+                category,
+                categoryNote: isOtherCategory(category) ? categoryNote.trim() : '',
+                amount: amt,
+                partyName: partyName.trim(),
+                partyPhone: partyPhone.trim(),
+                date,
+                paymentMode,
+                handledBy: handledBy.trim(),
+                notes: notes.trim()
+              }
+        )
+      }));
+    } catch {
+      setSaving(false);
+      showToast('Could not save — check your connection and try again.');
+      return;
+    }
+    setSaving(false);
 
     showToast('Record updated.');
     logActivity(`Edit ${config.title} entry`, `Updated ${kind} of ₹${amt}${partyName.trim() ? ` — ${partyName.trim()}` : ''}`);
@@ -238,8 +247,8 @@ export default function AccountEditEntry({ config }: { config: AccountConfig }) 
           </div>
 
           <div className="row-actions">
-            <button type="submit" className="btn">
-              Save changes
+            <button type="submit" className="btn" disabled={saving}>
+              {saving ? 'Saving…' : 'Save changes'}
             </button>
             <button type="button" className="btn secondary" onClick={() => navigate(-1)}>
               Cancel

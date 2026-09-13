@@ -31,14 +31,19 @@ export async function saveNamespaced<T>(namespace: string, data: T): Promise<voi
  *   without a manual refresh — this is what makes "10-15 people on
  *   different devices" actually work day to day.
  * - `update` applies the change to local state immediately (so the UI never
- *   waits on the network) and saves in the background. A page that calls
- *   `update(...)` and then immediately navigates away (e.g. after Issue
- *   Equipment) is safe — the write is already in flight against a ref, not
- *   trapped inside a React state updater that a route change could abandon.
- * - If the background save fails (offline, RLS denial, etc.) it's logged to
- *   the console rather than surfaced in the UI yet — see DEPLOYMENT_PLAN.md
- *   "Known limitations" for why, and what to add if this becomes a problem
- *   in practice.
+ *   waits on the network) and returns the in-flight save as a Promise.
+ *
+ *   IMPORTANT: a caller that navigates away right after calling `update(...)`
+ *   MUST `await` that promise first. Each page mounts its own instance of
+ *   this hook (separate useState/useRef), not a shared context — so when you
+ *   navigate to a different page, THIS instance is thrown away and the page
+ *   you land on does a brand-new fetch from Supabase. If that fetch runs
+ *   before the background save above actually finishes writing, the new
+ *   page loads the OLD row and the record you just added looks like it
+ *   never happened — even though it's about to be saved a moment later.
+ *   This is exactly the "record vanished, had to redo it" bug: intermittent,
+ *   because it's a network-timing race, not a logic error. Always
+ *   `await update(...)` before `navigate(...)`.
  */
 export function useNamespacedData<T>(namespace: string, empty: T) {
   const [data, setDataState] = useState<T>(empty);
@@ -75,12 +80,13 @@ export function useNamespacedData<T>(namespace: string, empty: T) {
   }, [namespace]);
 
   const update = useCallback(
-    (updater: (prev: T) => T) => {
+    (updater: (prev: T) => T): Promise<void> => {
       const next = updater(dataRef.current);
       dataRef.current = next;
       setDataState(next);
-      saveNamespaced(namespace, next).catch((err) => {
+      return saveNamespaced(namespace, next).catch((err) => {
         console.error(`[caretrack] failed to save "${namespace}":`, err);
+        throw err;
       });
     },
     [namespace]

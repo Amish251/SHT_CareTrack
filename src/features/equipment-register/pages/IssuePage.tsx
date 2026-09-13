@@ -35,6 +35,7 @@ export default function IssuePage() {
   const [depositGiven, setDepositGiven] = useState(false);
   const [receivedBy, setReceivedBy] = useState('');
   const [notes, setNotes] = useState('');
+  const [saving, setSaving] = useState(false);
 
   // Units already picked by another line, per type, so the same unit can't be issued twice in one visit.
   const unitsTakenByOtherLines = (currentKey: string) => {
@@ -101,7 +102,7 @@ export default function IssuePage() {
     setNotes('');
   }
 
-  function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault();
 
     if (lines.some((l) => !l.typeId || !l.unitId)) {
@@ -153,13 +154,21 @@ export default function IssuePage() {
     }));
     const engagedUnitIds = new Set(unitIds);
 
-    update((prev) => ({
-      types: prev.types.map((t) => ({
-        ...t,
-        units: t.units.map((u) => (engagedUnitIds.has(u.id) ? { ...u, status: 'engaged' } : u))
-      })),
-      allocations: [...prev.allocations, ...newAllocations]
-    }));
+    setSaving(true);
+    try {
+      await update((prev) => ({
+        types: prev.types.map((t) => ({
+          ...t,
+          units: t.units.map((u) => (engagedUnitIds.has(u.id) ? { ...u, status: 'engaged' } : u))
+        })),
+        allocations: [...prev.allocations, ...newAllocations]
+      }));
+    } catch {
+      setSaving(false);
+      showToast('Could not save — check your connection and try again.');
+      return;
+    }
+    setSaving(false);
 
     showToast(
       lines.length > 1
@@ -485,8 +494,8 @@ export default function IssuePage() {
               </div>
             </div>
 
-            <button type="submit" className="btn">
-              {lines.length > 1 ? `Issue ${lines.length} items` : 'Issue equipment'}
+            <button type="submit" className="btn" disabled={saving}>
+              {saving ? 'Saving…' : lines.length > 1 ? `Issue ${lines.length} items` : 'Issue equipment'}
             </button>
           </form>
         </div>

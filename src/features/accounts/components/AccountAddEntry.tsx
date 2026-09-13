@@ -36,6 +36,7 @@ export default function AccountAddEntry({ config }: { config: AccountConfig }) {
   const [paymentMode, setPaymentMode] = useState<AccountPaymentMode>('Cash');
   const [handledBy, setHandledBy] = useState(session.username);
   const [notes, setNotes] = useState('');
+  const [saving, setSaving] = useState(false);
 
   const categories = kind === 'credit' ? CREDIT_CATEGORIES : DEBIT_CATEGORIES;
 
@@ -50,7 +51,7 @@ export default function AccountAddEntry({ config }: { config: AccountConfig }) {
     if (!isOtherCategory(next)) setCategoryNote('');
   }
 
-  function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     const amt = parseFloat(amount);
     if (Number.isNaN(amt) || amt <= 0 || !date) return;
@@ -59,24 +60,32 @@ export default function AccountAddEntry({ config }: { config: AccountConfig }) {
       return;
     }
 
-    update((prev) => ({
-      entries: [
-        ...prev.entries,
-        {
-          id: uid('acct'),
-          kind,
-          category,
-          categoryNote: isOtherCategory(category) ? categoryNote.trim() : '',
-          amount: amt,
-          partyName: partyName.trim(),
-          partyPhone: partyPhone.trim(),
-          date,
-          paymentMode,
-          handledBy: handledBy.trim(),
-          notes: notes.trim()
-        }
-      ]
-    }));
+    setSaving(true);
+    try {
+      await update((prev) => ({
+        entries: [
+          ...prev.entries,
+          {
+            id: uid('acct'),
+            kind,
+            category,
+            categoryNote: isOtherCategory(category) ? categoryNote.trim() : '',
+            amount: amt,
+            partyName: partyName.trim(),
+            partyPhone: partyPhone.trim(),
+            date,
+            paymentMode,
+            handledBy: handledBy.trim(),
+            notes: notes.trim()
+          }
+        ]
+      }));
+    } catch {
+      setSaving(false);
+      showToast('Could not save — check your connection and try again.');
+      return;
+    }
+    setSaving(false);
 
     showToast(`${kind === 'credit' ? 'Credit' : 'Debit'} of ₹${amt} recorded in ${config.title}.`);
     logActivity(
@@ -296,8 +305,8 @@ export default function AccountAddEntry({ config }: { config: AccountConfig }) {
             </div>
           </div>
 
-          <button type="submit" className="btn">
-            Save entry
+          <button type="submit" className="btn" disabled={saving}>
+            {saving ? 'Saving…' : 'Save entry'}
           </button>
         </form>
       </div>

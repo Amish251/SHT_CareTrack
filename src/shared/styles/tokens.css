@@ -257,7 +257,6 @@ h1, h2, h3, .display {
   color: #93a5bb;
   pointer-events: none;
 }
-.field-icon input, .field-icon select { padding-left: 36px; }
 
 /* ---------- Import / Export bar ---------- */
 .ie-tabs { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
@@ -609,4 +608,12 @@ tbody tr:hover td { background: #f8fbff; }
   .mobile-header { padding: 0 12px; }
   .mobile-header-brand span { font-size: 15px; }
   .main { padding-left: 9px; padding-right: 9px; }
+}
+
+/* ---------- Icon-field padding override (kept at end of file so it always
+   wins over the general input[type=...] padding shorthand above, which would
+   otherwise reset padding-left back to its default and overlap the icon) ---------- */
+.field-icon input,
+.field-icon select {
+  padding-left: 36px !important;
 }

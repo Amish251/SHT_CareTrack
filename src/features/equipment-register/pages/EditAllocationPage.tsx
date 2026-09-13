@@ -26,6 +26,7 @@ export default function EditAllocationPage() {
   const [depositGiven, setDepositGiven] = useState(false);
   const [receivedBy, setReceivedBy] = useState('');
   const [notes, setNotes] = useState('');
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (!allocation) return;
@@ -55,7 +56,7 @@ export default function EditAllocationPage() {
     if (checked && !receivedBy.trim()) setReceivedBy(session.username);
   }
 
-  function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (!allocation) return;
     const trimmedName = name.trim();
@@ -66,24 +67,32 @@ export default function EditAllocationPage() {
       return;
     }
 
-    update((prev) => ({
-      ...prev,
-      allocations: prev.allocations.map((a) =>
-        a.id !== allocation.id
-          ? a
-          : {
-              ...a,
-              patientName: trimmedName,
-              patientPhone: phone.trim(),
-              tokenAmount: token,
-              issueDate,
-              expectedReturn,
-              depositGiven,
-              depositReceivedBy: depositGiven ? receivedBy.trim() : '',
-              notes: notes.trim()
-            }
-      )
-    }));
+    setSaving(true);
+    try {
+      await update((prev) => ({
+        ...prev,
+        allocations: prev.allocations.map((a) =>
+          a.id !== allocation.id
+            ? a
+            : {
+                ...a,
+                patientName: trimmedName,
+                patientPhone: phone.trim(),
+                tokenAmount: token,
+                issueDate,
+                expectedReturn,
+                depositGiven,
+                depositReceivedBy: depositGiven ? receivedBy.trim() : '',
+                notes: notes.trim()
+              }
+        )
+      }));
+    } catch {
+      setSaving(false);
+      showToast('Could not save — check your connection and try again.');
+      return;
+    }
+    setSaving(false);
 
     showToast('Record updated.');
     logActivity('Edit loan record', `Updated record for ${trimmedName}`);
@@ -196,8 +205,8 @@ export default function EditAllocationPage() {
           </div>
 
           <div className="row-actions">
-            <button type="submit" className="btn">
-              Save changes
+            <button type="submit" className="btn" disabled={saving}>
+              {saving ? 'Saving…' : 'Save changes'}
             </button>
             <button type="button" className="btn secondary" onClick={() => navigate(-1)}>
               Cancel

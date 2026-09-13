@@ -38,6 +38,7 @@ export default function EditEntryPage() {
   const [paymentMode, setPaymentMode] = useState<PaymentMode>('Cash');
   const [receivedBy, setReceivedBy] = useState('');
   const [notes, setNotes] = useState('');
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (!entry) return;
@@ -77,7 +78,7 @@ export default function EditEntryPage() {
     if (!isOtherCategory(next)) setCategoryNote('');
   }
 
-  function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (!entry) return;
     const amt = parseFloat(amount);
@@ -87,25 +88,33 @@ export default function EditEntryPage() {
       return;
     }
 
-    update((prev) => ({
-      entries: prev.entries.map((e) =>
-        e.id !== entry.id
-          ? e
-          : {
-              ...e,
-              kind,
-              category,
-              categoryNote: isOtherCategory(category) ? categoryNote.trim() : '',
-              amount: amt,
-              partyName: partyName.trim(),
-              partyPhone: partyPhone.trim(),
-              date,
-              paymentMode,
-              receivedBy: receivedBy.trim(),
-              notes: notes.trim()
-            }
-      )
-    }));
+    setSaving(true);
+    try {
+      await update((prev) => ({
+        entries: prev.entries.map((e) =>
+          e.id !== entry.id
+            ? e
+            : {
+                ...e,
+                kind,
+                category,
+                categoryNote: isOtherCategory(category) ? categoryNote.trim() : '',
+                amount: amt,
+                partyName: partyName.trim(),
+                partyPhone: partyPhone.trim(),
+                date,
+                paymentMode,
+                receivedBy: receivedBy.trim(),
+                notes: notes.trim()
+              }
+        )
+      }));
+    } catch {
+      setSaving(false);
+      showToast('Could not save — check your connection and try again.');
+      return;
+    }
+    setSaving(false);
 
     showToast('Record updated.');
     logActivity(
@@ -239,8 +248,8 @@ export default function EditEntryPage() {
           </div>
 
           <div className="row-actions">
-            <button type="submit" className="btn">
-              Save changes
+            <button type="submit" className="btn" disabled={saving}>
+              {saving ? 'Saving…' : 'Save changes'}
             </button>
             <button type="button" className="btn secondary" onClick={() => navigate(-1)}>
               Cancel
