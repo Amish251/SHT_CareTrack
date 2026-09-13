@@ -514,25 +514,67 @@ export async function buildAccountDebitReceiptPdf(
   return doc.output('blob');
 }
 
+/** iPhone/iPad detection, including iPadOS 13+, which reports as "MacIntel" but has touch. */
+function isIOS(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  const ua = navigator.userAgent;
+  const isAppleTouchDevice = /iPad|iPhone|iPod/.test(ua);
+  const isIPadOS13Plus = navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
+  return isAppleTouchDevice || isIPadOS13Plus;
+}
+
 /**
- * Shares a receipt on WhatsApp with THAT RECORD'S OWN NUMBER — always opens
- * that specific number's chat via a `wa.me/<digits>` deep link, with the PDF
- * downloaded first so it's one tap away to attach inside the now-open chat.
+ * Shares a receipt on WhatsApp with THAT RECORD'S OWN NUMBER.
  *
- * Deliberately does NOT use the Web Share API (`navigator.share`) as the
- * primary path even though it can attach the file directly: the OS/browser
- * share sheet hands off to WhatsApp's own generic "choose a chat" screen,
- * not the specific contact — no website can skip that picker for a named
- * contact, since WhatsApp doesn't expose that to the web on purpose (privacy).
- * Opening the right chat every time matters more here than auto-attaching,
- * so `wa.me` (which *is* guaranteed to open one specific number's chat) wins.
+ * Android / desktop: always opens that specific number's chat via a
+ * `wa.me/<digits>` deep link, with the PDF downloaded first so it's one tap
+ * away to attach inside the now-open chat. We deliberately don't use the Web
+ * Share API here even though it can attach the file directly, because the
+ * OS/browser share sheet hands off to WhatsApp's own generic "choose a chat"
+ * screen, not the specific contact — no website can skip that picker for a
+ * named contact, since WhatsApp doesn't expose that to the web on purpose
+ * (privacy). Opening the right chat every time matters more than
+ * auto-attaching here, so `wa.me` wins on these platforms.
+ *
+ * iOS (iPhone/iPad) needs the opposite trade-off, because Safari breaks both
+ * halves of that approach: blob downloads via `<a download>` are ignored —
+ * Safari just opens the PDF for viewing instead of saving it — and
+ * `window.open()` calls made after the async PDF-generation work are treated
+ * as not user-initiated and get silently blocked by Safari's popup blocker.
+ * So on iOS we use the native Web Share API instead: it reliably attaches the
+ * actual PDF and lets the person pick WhatsApp from Apple's own share sheet,
+ * then pick the chat themselves (same one unavoidable manual step as the
+ * generic OS share sheet everywhere else).
  */
 export async function shareReceiptOnWhatsApp(
   phone: string,
   blob: Blob,
   filename: string,
   message: string
-): Promise<'downloaded'> {
+): Promise<'shared' | 'downloaded'> {
+  if (isIOS()) {
+    const file = new File([blob], filename, { type: 'application/pdf' });
+    const nav = navigator as Navigator & {
+      canShare?: (data: { files: File[] }) => boolean;
+      share?: (data: { files: File[]; title?: string; text?: string }) => Promise<void>;
+    };
+
+    if (nav.canShare && nav.canShare({ files: [file] }) && nav.share) {
+      try {
+        await nav.share({ files: [file], title: filename, text: message });
+        return 'shared';
+      } catch {
+        // user cancelled the native share sheet — fall through to at least show the PDF
+      }
+    }
+
+    // Very old iOS without Web Share file support: no reliable way to force a
+    // save, so open the PDF and let the person use Safari's own share icon.
+    const viewUrl = URL.createObjectURL(blob);
+    window.open(viewUrl, '_blank');
+    return 'downloaded';
+  }
+
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;

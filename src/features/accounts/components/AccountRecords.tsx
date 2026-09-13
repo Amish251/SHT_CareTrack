@@ -75,8 +75,12 @@ export default function AccountRecords({ config }: { config: AccountConfig }) {
       const receiptNo = accountReceiptNumber(data, entry, config);
       const message = `${config.title} receipt ${receiptNo} for ₹${entry.amount} — thank you${entry.partyName ? ', ' + entry.partyName : ''}! Please find the receipt attached.`;
       const filename = `${config.slug}-receipt-${(entry.partyName || 'entry').replace(/\s+/g, '-')}.pdf`;
-      await shareReceiptOnWhatsApp(entry.partyPhone, blob, filename, message);
-      showToast('Receipt downloaded and their WhatsApp chat opened — attach the file to send it.');
+      const result = await shareReceiptOnWhatsApp(entry.partyPhone, blob, filename, message);
+      showToast(
+        result === 'shared'
+          ? 'Share sheet opened — pick WhatsApp, then the chat, to send it.'
+          : 'Receipt downloaded and their WhatsApp chat opened — attach the file to send it.'
+      );
     } catch (err) {
       console.error('Receipt generation failed:', err);
       showToast('Could not generate the receipt — please try again or report this.');
@@ -108,8 +112,12 @@ export default function AccountRecords({ config }: { config: AccountConfig }) {
       const receiptNo = accountDebitReceiptNumber(data, entry, config);
       const message = `${config.title} expense receipt ${receiptNo} for ₹${entry.amount}${entry.partyName ? ' — paid to ' + entry.partyName : ''}. Please find the receipt attached.`;
       const filename = `${config.slug}-expense-receipt-${(entry.partyName || 'entry').replace(/\s+/g, '-')}.pdf`;
-      await shareReceiptOnWhatsApp(entry.partyPhone, blob, filename, message);
-      showToast('Receipt downloaded and their WhatsApp chat opened — attach the file to send it.');
+      const result = await shareReceiptOnWhatsApp(entry.partyPhone, blob, filename, message);
+      showToast(
+        result === 'shared'
+          ? 'Share sheet opened — pick WhatsApp, then the chat, to send it.'
+          : 'Receipt downloaded and their WhatsApp chat opened — attach the file to send it.'
+      );
     } catch (err) {
       console.error('Receipt generation failed:', err);
       showToast('Could not generate the receipt — please try again or report this.');
