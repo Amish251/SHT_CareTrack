@@ -2,13 +2,43 @@ import { jsPDF } from 'jspdf';
 import type { Allocation, EquipmentRegisterData } from '@/features/equipment-register/types';
 import { fmtDate, todayStr, typeById, unitById } from '@/features/equipment-register/helpers';
 import type { FinanceData, FinanceEntry } from '@/features/finance/types';
-import { donationReceiptNumber } from '@/features/finance/helpers';
+import { donationReceiptNumber, expenseReceiptNumber, categoryDisplay as financeCategoryDisplay } from '@/features/finance/helpers';
 import type { AccountConfig } from '@/features/accounts/config';
 import type { AccountEntry, AccountLedgerData } from '@/features/accounts/types';
-import { accountReceiptNumber, categoryDisplay } from '@/features/accounts/helpers';
+import { accountDebitReceiptNumber, accountReceiptNumber, categoryDisplay } from '@/features/accounts/helpers';
 import { amountInWords } from '@/shared/lib/numberWords';
 
 const TRUST_NAME = 'Show Humanity Trust';
+
+/** Color scheme for a receipt — lets debit/expense receipts look visually
+ *  distinct (gold/maroon) from credit/donation receipts (blue) at a glance,
+ *  while sharing the exact same layout code. */
+interface ReceiptTheme {
+  /** Trust name + section-bar label + section-bar text color. */
+  primary: [number, number, number];
+  /** Line under the header, and the outer border/box border. */
+  accent: [number, number, number];
+  /** Light fill behind the section bar and the amount box. */
+  boxBg: [number, number, number];
+  /** Border around the amount box. */
+  boxBorder: [number, number, number];
+}
+
+const DONATION_THEME: ReceiptTheme = {
+  primary: [14, 47, 82],
+  accent: [31, 111, 178],
+  boxBg: [245, 249, 252],
+  boxBorder: [180, 190, 200]
+};
+
+/** Deep maroon + gold — deliberately far from the blue donation theme so an
+ *  expense/debit receipt is identifiable as "money going out" on sight. */
+const EXPENSE_THEME: ReceiptTheme = {
+  primary: [111, 21, 21],
+  accent: [163, 39, 39],
+  boxBg: [253, 246, 227],
+  boxBorder: [196, 155, 61]
+};
 
 /** Fetches /logo.png and resolves it as a base64 data URL for embedding in the PDF.
  *  Resolves to null (rather than throwing) if the logo can't be loaded, so a missing
@@ -36,20 +66,22 @@ class Receipt {
   pageWidth: number;
   pageHeight: number;
   y = 46;
+  theme: ReceiptTheme;
 
-  constructor() {
+  constructor(theme: ReceiptTheme = DONATION_THEME) {
     this.doc = new jsPDF({ unit: 'pt', format: 'a5' });
     this.pageWidth = this.doc.internal.pageSize.getWidth();
     this.pageHeight = this.doc.internal.pageSize.getHeight();
     this.rightEdge = this.pageWidth - this.marginX;
+    this.theme = theme;
   }
 
   /** Outer border, logo + Trust name, title/receipt-no strip. Leaves `this.y` ready for content. */
   async drawHeader(title: string, receiptNo: string, logo: string | null) {
-    const { doc, marginX, rightEdge } = this;
+    const { doc, marginX, rightEdge, theme } = this;
     const outerMargin = 18;
 
-    doc.setDrawColor(180, 190, 200);
+    doc.setDrawColor(...theme.boxBorder);
     doc.setLineWidth(1);
     doc.roundedRect(outerMargin, outerMargin, this.pageWidth - outerMargin * 2, this.pageHeight - outerMargin * 2, 6, 6);
 
@@ -65,7 +97,7 @@ class Receipt {
       }
     }
 
-    doc.setTextColor(14, 47, 82);
+    doc.setTextColor(...theme.primary);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(16);
     doc.text(TRUST_NAME, titleX, this.y);
@@ -77,7 +109,7 @@ class Receipt {
     doc.setTextColor(0, 0, 0);
 
     this.y += 20;
-    doc.setDrawColor(31, 111, 178);
+    doc.setDrawColor(...theme.accent);
     doc.setLineWidth(1.2);
     doc.line(marginX, this.y, rightEdge, this.y);
     this.y += 22;
@@ -113,12 +145,12 @@ class Receipt {
 
   /** A shaded section-header bar, e.g. above an itemized table. */
   sectionBar(leftLabel: string, rightLabel: string) {
-    const { doc, marginX, rightEdge } = this;
-    doc.setFillColor(245, 249, 252);
+    const { doc, marginX, rightEdge, theme } = this;
+    doc.setFillColor(...theme.boxBg);
     doc.rect(marginX, this.y, rightEdge - marginX, 20, 'F');
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(9.5);
-    doc.setTextColor(53, 87, 122);
+    doc.setTextColor(...theme.primary);
     doc.text(leftLabel, marginX + 8, this.y + 13.5);
     doc.text(rightLabel, rightEdge - 8, this.y + 13.5, { align: 'right' });
     doc.setTextColor(0, 0, 0);
@@ -229,27 +261,27 @@ export async function buildDepositReceiptPdf(
  */
 export async function buildDonationReceiptPdf(entry: FinanceEntry, data: FinanceData): Promise<Blob> {
   const receiptNo = donationReceiptNumber(data, entry);
-  const r = new Receipt();
+  const r = new Receipt(DONATION_THEME);
   const logo = await loadLogoDataUrl();
   await r.drawHeader('Donation Receipt', receiptNo, logo);
   const { doc, marginX, rightEdge } = r;
 
   r.row('Received from:', entry.partyName || '—');
   if (entry.partyPhone) r.row('Contact number:', entry.partyPhone);
-  r.row('Purpose:', entry.category);
+  r.row('Purpose:', financeCategoryDisplay(entry));
   r.row('Payment mode:', entry.paymentMode || '—');
 
   r.y += 6;
   const boxY = r.y;
-  doc.setFillColor(245, 249, 252);
+  doc.setFillColor(...r.theme.boxBg);
   doc.rect(marginX, boxY, rightEdge - marginX, 46, 'F');
-  doc.setDrawColor(180, 190, 200);
+  doc.setDrawColor(...r.theme.boxBorder);
   doc.setLineWidth(0.8);
   doc.rect(marginX, boxY, rightEdge - marginX, 46);
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(10);
-  doc.setTextColor(53, 87, 122);
+  doc.setTextColor(...r.theme.primary);
   doc.text('AMOUNT RECEIVED', marginX + 10, boxY + 18);
   doc.setFontSize(15);
   doc.text(`Rs. ${entry.amount.toLocaleString('en-IN')}`, rightEdge - 10, boxY + 19, { align: 'right' });
@@ -285,13 +317,74 @@ export async function buildDonationReceiptPdf(entry: FinanceEntry, data: Finance
 }
 
 /**
+ * Builds an expense receipt as a PDF blob — same layout as the donation
+ * receipt, but themed in maroon/gold instead of blue so it's identifiable
+ * as "money going out" at a glance, and worded for a payment rather than
+ * a contribution (Paid to / Paid out by / AMOUNT PAID, no thank-you note).
+ */
+export async function buildExpenseReceiptPdf(entry: FinanceEntry, data: FinanceData): Promise<Blob> {
+  const receiptNo = expenseReceiptNumber(data, entry);
+  const r = new Receipt(EXPENSE_THEME);
+  const logo = await loadLogoDataUrl();
+  await r.drawHeader('Expense Receipt', receiptNo, logo);
+  const { doc, marginX, rightEdge } = r;
+
+  r.row('Paid to:', entry.partyName || '—');
+  if (entry.partyPhone) r.row('Contact number:', entry.partyPhone);
+  r.row('Category:', financeCategoryDisplay(entry));
+  r.row('Payment mode:', entry.paymentMode || '—');
+
+  r.y += 6;
+  const boxY = r.y;
+  doc.setFillColor(...r.theme.boxBg);
+  doc.rect(marginX, boxY, rightEdge - marginX, 46, 'F');
+  doc.setDrawColor(...r.theme.boxBorder);
+  doc.setLineWidth(0.8);
+  doc.rect(marginX, boxY, rightEdge - marginX, 46);
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10);
+  doc.setTextColor(...r.theme.primary);
+  doc.text('AMOUNT PAID', marginX + 10, boxY + 18);
+  doc.setFontSize(15);
+  doc.text(`Rs. ${entry.amount.toLocaleString('en-IN')}`, rightEdge - 10, boxY + 19, { align: 'right' });
+  doc.setFont('helvetica', 'italic');
+  doc.setFontSize(9);
+  doc.setTextColor(98, 120, 141);
+  doc.text(amountInWords(entry.amount), marginX + 10, boxY + 34);
+  doc.setTextColor(0, 0, 0);
+  r.y = boxY + 46 + 24;
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10.5);
+  doc.text('Paid out by:', marginX, r.y);
+  doc.setFont('helvetica', 'normal');
+  doc.text(entry.receivedBy || '—', marginX + 150, r.y);
+  r.y += 22;
+
+  if (entry.notes) {
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9.5);
+    doc.setTextColor(98, 120, 141);
+    const noteLines = doc.splitTextToSize(`Note: ${entry.notes}`, rightEdge - marginX);
+    doc.text(noteLines, marginX, r.y);
+    doc.setTextColor(0, 0, 0);
+    r.y += noteLines.length * 12 + 10;
+  }
+
+  r.signatureBlock(`This is a record of an expense paid out of ${TRUST_NAME}'s funds, issued for record-keeping purposes.`);
+
+  return doc.output('blob');
+}
+
+/**
  * Builds a credit receipt for one of the named account ledgers (Ambaji
  * Account, SEOC Account, or any future one in `ACCOUNTS`) — same visual
  * style as the donation receipt, but scoped to that account: its own
  * receipt-number series (so Ambaji and SEOC numbering never collide) and
  * the account's name printed as its own line so it's clear which book this
- * money was recorded against. Only credit entries get a receipt — debits
- * (expenses) don't have one, same as expenses in the Donation module.
+ * money was recorded against. Debit entries get their own themed receipt —
+ * see buildAccountDebitReceiptPdf below.
  */
 export async function buildAccountReceiptPdf(
   entry: AccountEntry,
@@ -299,7 +392,7 @@ export async function buildAccountReceiptPdf(
   config: AccountConfig
 ): Promise<Blob> {
   const receiptNo = accountReceiptNumber(data, entry, config);
-  const r = new Receipt();
+  const r = new Receipt(DONATION_THEME);
   const logo = await loadLogoDataUrl();
   await r.drawHeader('Credit Receipt', receiptNo, logo);
   const { doc, marginX, rightEdge } = r;
@@ -312,15 +405,15 @@ export async function buildAccountReceiptPdf(
 
   r.y += 6;
   const boxY = r.y;
-  doc.setFillColor(245, 249, 252);
+  doc.setFillColor(...r.theme.boxBg);
   doc.rect(marginX, boxY, rightEdge - marginX, 46, 'F');
-  doc.setDrawColor(180, 190, 200);
+  doc.setDrawColor(...r.theme.boxBorder);
   doc.setLineWidth(0.8);
   doc.rect(marginX, boxY, rightEdge - marginX, 46);
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(10);
-  doc.setTextColor(53, 87, 122);
+  doc.setTextColor(...r.theme.primary);
   doc.text('AMOUNT RECEIVED', marginX + 10, boxY + 18);
   doc.setFontSize(15);
   doc.text(`Rs. ${entry.amount.toLocaleString('en-IN')}`, rightEdge - 10, boxY + 19, { align: 'right' });
@@ -351,6 +444,72 @@ export async function buildAccountReceiptPdf(
   r.signatureBlock(
     `With sincere thanks for this contribution towards ${config.title}. This receipt is issued for record-keeping purposes.`
   );
+
+  return doc.output('blob');
+}
+
+/**
+ * Builds a debit (expense) receipt for one of the named account ledgers —
+ * same layout as buildAccountReceiptPdf, but themed in maroon/gold and
+ * worded for a payment rather than a contribution, same distinction as
+ * buildExpenseReceiptPdf makes for the Donation module.
+ */
+export async function buildAccountDebitReceiptPdf(
+  entry: AccountEntry,
+  data: AccountLedgerData,
+  config: AccountConfig
+): Promise<Blob> {
+  const receiptNo = accountDebitReceiptNumber(data, entry, config);
+  const r = new Receipt(EXPENSE_THEME);
+  const logo = await loadLogoDataUrl();
+  await r.drawHeader('Expense Receipt', receiptNo, logo);
+  const { doc, marginX, rightEdge } = r;
+
+  r.row('Account:', config.title);
+  r.row('Paid to:', entry.partyName || '—');
+  if (entry.partyPhone) r.row('Contact number:', entry.partyPhone);
+  r.row('Category:', categoryDisplay(entry));
+  r.row('Payment mode:', entry.paymentMode || '—');
+
+  r.y += 6;
+  const boxY = r.y;
+  doc.setFillColor(...r.theme.boxBg);
+  doc.rect(marginX, boxY, rightEdge - marginX, 46, 'F');
+  doc.setDrawColor(...r.theme.boxBorder);
+  doc.setLineWidth(0.8);
+  doc.rect(marginX, boxY, rightEdge - marginX, 46);
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10);
+  doc.setTextColor(...r.theme.primary);
+  doc.text('AMOUNT PAID', marginX + 10, boxY + 18);
+  doc.setFontSize(15);
+  doc.text(`Rs. ${entry.amount.toLocaleString('en-IN')}`, rightEdge - 10, boxY + 19, { align: 'right' });
+  doc.setFont('helvetica', 'italic');
+  doc.setFontSize(9);
+  doc.setTextColor(98, 120, 141);
+  doc.text(amountInWords(entry.amount), marginX + 10, boxY + 34);
+  doc.setTextColor(0, 0, 0);
+  r.y = boxY + 46 + 24;
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10.5);
+  doc.text('Paid out by:', marginX, r.y);
+  doc.setFont('helvetica', 'normal');
+  doc.text(entry.handledBy || '—', marginX + 150, r.y);
+  r.y += 22;
+
+  if (entry.notes) {
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9.5);
+    doc.setTextColor(98, 120, 141);
+    const noteLines = doc.splitTextToSize(`Note: ${entry.notes}`, rightEdge - marginX);
+    doc.text(noteLines, marginX, r.y);
+    doc.setTextColor(0, 0, 0);
+    r.y += noteLines.length * 12 + 10;
+  }
+
+  r.signatureBlock(`This is a record of an expense paid out of ${config.title}'s funds, issued for record-keeping purposes.`);
 
   return doc.output('blob');
 }

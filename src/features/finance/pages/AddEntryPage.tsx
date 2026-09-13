@@ -16,6 +16,7 @@ import { fmtDate, todayStr } from '@/features/equipment-register/helpers';
 import { logActivity } from '@/shared/lib/activityLog';
 import ImportExportBar, { type ImportResult } from '@/shared/components/ImportExportBar';
 import { pickField } from '@/shared/lib/tableExport';
+import { categoryDisplay, isOtherCategory } from '../helpers';
 
 export default function AddEntryPage() {
   const [data, update] = useFinanceData();
@@ -25,6 +26,7 @@ export default function AddEntryPage() {
 
   const [kind, setKind] = useState<FinanceKind>('donation');
   const [category, setCategory] = useState(DONATION_CATEGORIES[0]);
+  const [categoryNote, setCategoryNote] = useState('');
   const [amount, setAmount] = useState('');
   const [partyName, setPartyName] = useState('');
   const [partyPhone, setPartyPhone] = useState('');
@@ -38,12 +40,22 @@ export default function AddEntryPage() {
   function handleKindChange(next: FinanceKind) {
     setKind(next);
     setCategory(next === 'donation' ? DONATION_CATEGORIES[0] : EXPENSE_CATEGORIES[0]);
+    setCategoryNote('');
+  }
+
+  function handleCategoryChange(next: string) {
+    setCategory(next);
+    if (!isOtherCategory(next)) setCategoryNote('');
   }
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
     const amt = parseFloat(amount);
     if (Number.isNaN(amt) || amt <= 0 || !date) return;
+    if (isOtherCategory(category) && !categoryNote.trim()) {
+      showToast('Please specify what "Other" means for this entry.');
+      return;
+    }
 
     update((prev) => ({
       entries: [
@@ -52,6 +64,7 @@ export default function AddEntryPage() {
           id: uid('fin'),
           kind,
           category,
+          categoryNote: isOtherCategory(category) ? categoryNote.trim() : '',
           amount: amt,
           partyName: partyName.trim(),
           partyPhone: partyPhone.trim(),
@@ -86,6 +99,7 @@ export default function AddEntryPage() {
         const rowKind: FinanceKind = kindRaw === 'expense' ? 'expense' : 'donation';
         const rowCategory =
           pickField(row, 'Category', 'Purpose').trim() || (rowKind === 'donation' ? 'General Donation' : 'Other');
+        const rowCategoryNote = pickField(row, 'CategoryNote', 'Category Note', 'OtherDetail', 'Other Detail').trim();
         const amt = parseFloat(pickField(row, 'Amount'));
         const rowPartyName = pickField(row, 'PartyName', 'Party Name', 'DonorName', 'Donor', 'PaidTo').trim();
         const rowPartyPhone = pickField(row, 'PartyPhone', 'Party Phone', 'Phone', 'Contact').trim();
@@ -106,6 +120,7 @@ export default function AddEntryPage() {
           id: uid('fin'),
           kind: rowKind,
           category: rowCategory,
+          categoryNote: isOtherCategory(rowCategory) ? rowCategoryNote : '',
           amount: amt,
           partyName: rowPartyName,
           partyPhone: rowPartyPhone,
@@ -136,10 +151,21 @@ export default function AddEntryPage() {
         <ImportExportBar
           entityLabel="donation/expense entries"
           sampleFilename="donation-entries-sample.xlsx"
-          sampleHeaders={['Kind', 'Category', 'Amount', 'PartyName', 'PartyPhone', 'Date', 'PaymentMode', 'ReceivedBy', 'Notes']}
+          sampleHeaders={[
+            'Kind',
+            'Category',
+            'CategoryNote',
+            'Amount',
+            'PartyName',
+            'PartyPhone',
+            'Date',
+            'PaymentMode',
+            'ReceivedBy',
+            'Notes'
+          ]}
           sampleRows={[
-            ['donation', 'General Donation', 1000, 'Rajesh Shah', '9898989898', '2026-09-01', 'UPI', 'Amish Patel', 'Diwali donation'],
-            ['expense', 'Transport', 350, 'Auto fare', '', '2026-09-02', 'Cash', 'Amish Patel', 'Equipment pickup']
+            ['donation', 'General Donation', '', 1000, 'Rajesh Shah', '9898989898', '2026-09-01', 'UPI', 'Amish Patel', 'Diwali donation'],
+            ['expense', 'Other', 'Auto fare', 350, 'Auto fare', '', '2026-09-02', 'Cash', 'Amish Patel', 'Equipment pickup']
           ]}
           onImportRows={handleImportEntries}
           exportFilenameBase="donation-expense-entries"
@@ -149,7 +175,7 @@ export default function AddEntryPage() {
             data.entries.map((e) => [
               fmtDate(e.date),
               e.kind === 'donation' ? 'Donation' : 'Expense',
-              e.category,
+              categoryDisplay(e),
               e.partyName || '—',
               e.partyPhone || '—',
               e.amount,
@@ -170,7 +196,7 @@ export default function AddEntryPage() {
             </div>
             <div>
               <label htmlFor="fin-category">{kind === 'donation' ? 'Purpose' : 'Category'}</label>
-              <select id="fin-category" value={category} onChange={(e) => setCategory(e.target.value)}>
+              <select id="fin-category" value={category} onChange={(e) => handleCategoryChange(e.target.value)}>
                 {categories.map((c) => (
                   <option key={c} value={c}>
                     {c}
@@ -178,6 +204,19 @@ export default function AddEntryPage() {
                 ))}
               </select>
             </div>
+            {isOtherCategory(category) && (
+              <div>
+                <label htmlFor="fin-category-note">Please specify</label>
+                <input
+                  type="text"
+                  id="fin-category-note"
+                  required
+                  placeholder="What is this for?"
+                  value={categoryNote}
+                  onChange={(e) => setCategoryNote(e.target.value)}
+                />
+              </div>
+            )}
             <div>
               <label htmlFor="fin-amount">Amount (₹)</label>
               <input

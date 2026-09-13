@@ -10,7 +10,7 @@ import {
   type AccountPaymentMode
 } from '../types';
 import type { AccountConfig } from '../config';
-import { categoryDisplay } from '../helpers';
+import { categoryDisplay, isOtherCategory } from '../helpers';
 import { uid } from '@/shared/lib/storage';
 import { useToast } from '@/shared/components/ui/Toast';
 import { useAuth } from '@/shared/components/AuthGate';
@@ -46,14 +46,14 @@ export default function AccountAddEntry({ config }: { config: AccountConfig }) {
 
   function handleCategoryChange(next: string) {
     setCategory(next);
-    if (next !== 'Other') setCategoryNote('');
+    if (!isOtherCategory(next)) setCategoryNote('');
   }
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
     const amt = parseFloat(amount);
     if (Number.isNaN(amt) || amt <= 0 || !date) return;
-    if (category === 'Other' && !categoryNote.trim()) {
+    if (isOtherCategory(category) && !categoryNote.trim()) {
       showToast('Please specify what "Other" means for this entry.');
       return;
     }
@@ -65,7 +65,7 @@ export default function AccountAddEntry({ config }: { config: AccountConfig }) {
           id: uid('acct'),
           kind,
           category,
-          categoryNote: category === 'Other' ? categoryNote.trim() : '',
+          categoryNote: isOtherCategory(category) ? categoryNote.trim() : '',
           amount: amt,
           partyName: partyName.trim(),
           partyPhone: partyPhone.trim(),
@@ -117,7 +117,7 @@ export default function AccountAddEntry({ config }: { config: AccountConfig }) {
           id: uid('acct'),
           kind: rowKind,
           category: rowCategory,
-          categoryNote: rowCategory === 'Other' ? rowCategoryNote : '',
+          categoryNote: isOtherCategory(rowCategory) ? rowCategoryNote : '',
           amount: amt,
           partyName: rowPartyName,
           partyPhone: rowPartyPhone,
@@ -162,7 +162,7 @@ export default function AccountAddEntry({ config }: { config: AccountConfig }) {
           ]}
           sampleRows={[
             ['credit', 'Donation', '', 1000, 'Rajesh Shah', '9898989898', '2026-09-01', 'UPI', 'Amish Patel', 'Diwali donation'],
-            ['debit', 'Other', 'Printing pamphlets', 350, 'Local Press', '', '2026-09-02', 'Cash', 'Amish Patel', 'Event material']
+            ['debit', 'Other Expense', 'Printing pamphlets', 350, 'Local Press', '', '2026-09-02', 'Cash', 'Amish Patel', 'Event material']
           ]}
           onImportRows={handleImportEntries}
           exportFilenameBase={`${config.slug}-entries`}
@@ -201,7 +201,7 @@ export default function AccountAddEntry({ config }: { config: AccountConfig }) {
                 ))}
               </select>
             </div>
-            {category === 'Other' && (
+            {isOtherCategory(category) && (
               <div>
                 <label htmlFor="acct-category-note">Please specify</label>
                 <input

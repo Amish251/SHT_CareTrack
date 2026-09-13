@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useFinanceData } from '../store';
 import type { FinanceKind } from '../types';
-import { donationReceiptNumber } from '../helpers';
+import { categoryDisplay, donationReceiptNumber, expenseReceiptNumber } from '../helpers';
 import { fmtDate } from '@/features/equipment-register/helpers';
 import { useToast } from '@/shared/components/ui/Toast';
 import PdfPreviewModal from '@/shared/components/PdfPreviewModal';
@@ -23,7 +24,7 @@ export default function RecordsPage() {
       .filter((e) => {
         if (kindFilter && e.kind !== kindFilter) return false;
         if (q) {
-          const hay = `${e.partyName} ${e.category} ${e.notes}`.toLowerCase();
+          const hay = `${e.partyName} ${categoryDisplay(e)} ${e.notes}`.toLowerCase();
           if (!hay.includes(q)) return false;
         }
         return true;
@@ -73,6 +74,39 @@ export default function RecordsPage() {
       const receiptNo = donationReceiptNumber(data, entry);
       const message = `Donation receipt ${receiptNo} for ₹${entry.amount} — thank you${entry.partyName ? ', ' + entry.partyName : ''}! Please find the receipt attached.`;
       const filename = `donation-receipt-${(entry.partyName || 'donor').replace(/\s+/g, '-')}.pdf`;
+      await shareReceiptOnWhatsApp(entry.partyPhone, blob, filename, message);
+      showToast('Receipt downloaded and their WhatsApp chat opened — attach the file to send it.');
+    } catch (err) {
+      console.error('Receipt generation failed:', err);
+      showToast('Could not generate the receipt — please try again or report this.');
+    }
+  }
+
+  async function handleViewExpenseReceipt(id: string) {
+    const entry = data.entries.find((e) => e.id === id);
+    if (!entry) return;
+    showToast('Preparing receipt…');
+    try {
+      const { buildExpenseReceiptPdf } = await import('@/shared/lib/receipt');
+      const blob = await buildExpenseReceiptPdf(entry, data);
+      const url = URL.createObjectURL(blob);
+      setPreview({ url, title: `Expense receipt — ${entry.partyName || 'Expense'}` });
+    } catch (err) {
+      console.error('Receipt generation failed:', err);
+      showToast('Could not generate the receipt — please try again or report this.');
+    }
+  }
+
+  async function handleSendExpenseReceipt(id: string) {
+    const entry = data.entries.find((e) => e.id === id);
+    if (!entry) return;
+    showToast('Preparing receipt…');
+    try {
+      const { buildExpenseReceiptPdf, shareReceiptOnWhatsApp } = await import('@/shared/lib/receipt');
+      const blob = await buildExpenseReceiptPdf(entry, data);
+      const receiptNo = expenseReceiptNumber(data, entry);
+      const message = `Expense receipt ${receiptNo} for ₹${entry.amount}${entry.partyName ? ' — paid to ' + entry.partyName : ''}. Please find the receipt attached.`;
+      const filename = `expense-receipt-${(entry.partyName || 'expense').replace(/\s+/g, '-')}.pdf`;
       await shareReceiptOnWhatsApp(entry.partyPhone, blob, filename, message);
       showToast('Receipt downloaded and their WhatsApp chat opened — attach the file to send it.');
     } catch (err) {
@@ -133,7 +167,7 @@ export default function RecordsPage() {
                       {e.kind === 'donation' ? 'Donation' : 'Expense'}
                     </span>
                   </td>
-                  <td>{e.category}</td>
+                  <td>{categoryDisplay(e)}</td>
                   <td>
                     {e.partyName || '—'}
                     {e.partyPhone && <div style={{ fontSize: 11, color: 'var(--slate)' }}>{e.partyPhone}</div>}
@@ -142,14 +176,24 @@ export default function RecordsPage() {
                   <td style={{ maxWidth: 220, color: 'var(--slate)', fontSize: 12 }}>{e.notes || '—'}</td>
                   <td>
                     <div className="row-actions">
-                      {e.kind === 'donation' && (
+                      {e.kind === 'donation' ? (
                         <>
                           <button type="button" className="btn small secondary" onClick={() => handleViewReceipt(e.id)}>
                             View
                           </button>
                           <WhatsAppShareButton phone={e.partyPhone} onShare={() => handleSendReceipt(e.id)} />
                         </>
+                      ) : (
+                        <>
+                          <button type="button" className="btn small secondary" onClick={() => handleViewExpenseReceipt(e.id)}>
+                            View
+                          </button>
+                          <WhatsAppShareButton phone={e.partyPhone} onShare={() => handleSendExpenseReceipt(e.id)} />
+                        </>
                       )}
+                      <Link to={`/finance/edit/${e.id}`} className="btn small secondary">
+                        Edit
+                      </Link>
                       <button type="button" className="btn small danger" onClick={() => handleDelete(e.id)}>
                         Delete
                       </button>

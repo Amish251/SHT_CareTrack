@@ -5,6 +5,9 @@ export interface FinanceEntry {
   id: string;
   kind: FinanceKind;
   category: string;
+  /** Only used when category === 'Other' — what the person actually typed to explain it.
+   *  Shown in listings/exports/receipts as "Other — <categoryNote>" instead of bare "Other". */
+  categoryNote: string;
   amount: number;
   partyName: string;
   partyPhone: string;

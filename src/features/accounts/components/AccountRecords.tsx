@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useAccountData } from '../store';
 import type { AccountEntryKind } from '../types';
 import type { AccountConfig } from '../config';
-import { accountReceiptNumber, categoryDisplay } from '../helpers';
+import { accountDebitReceiptNumber, accountReceiptNumber, categoryDisplay } from '../helpers';
 import { fmtDate } from '@/features/equipment-register/helpers';
 import { useToast } from '@/shared/components/ui/Toast';
 import { logActivity } from '@/shared/lib/activityLog';
@@ -82,6 +83,39 @@ export default function AccountRecords({ config }: { config: AccountConfig }) {
     }
   }
 
+  async function handleViewExpenseReceipt(id: string) {
+    const entry = data.entries.find((e) => e.id === id);
+    if (!entry) return;
+    showToast('Preparing receipt…');
+    try {
+      const { buildAccountDebitReceiptPdf } = await import('@/shared/lib/receipt');
+      const blob = await buildAccountDebitReceiptPdf(entry, data, config);
+      const url = URL.createObjectURL(blob);
+      setPreview({ url, title: `Expense receipt — ${entry.partyName || config.title}` });
+    } catch (err) {
+      console.error('Receipt generation failed:', err);
+      showToast('Could not generate the receipt — please try again or report this.');
+    }
+  }
+
+  async function handleSendExpenseReceipt(id: string) {
+    const entry = data.entries.find((e) => e.id === id);
+    if (!entry) return;
+    showToast('Preparing receipt…');
+    try {
+      const { buildAccountDebitReceiptPdf, shareReceiptOnWhatsApp } = await import('@/shared/lib/receipt');
+      const blob = await buildAccountDebitReceiptPdf(entry, data, config);
+      const receiptNo = accountDebitReceiptNumber(data, entry, config);
+      const message = `${config.title} expense receipt ${receiptNo} for ₹${entry.amount}${entry.partyName ? ' — paid to ' + entry.partyName : ''}. Please find the receipt attached.`;
+      const filename = `${config.slug}-expense-receipt-${(entry.partyName || 'entry').replace(/\s+/g, '-')}.pdf`;
+      await shareReceiptOnWhatsApp(entry.partyPhone, blob, filename, message);
+      showToast('Receipt downloaded and their WhatsApp chat opened — attach the file to send it.');
+    } catch (err) {
+      console.error('Receipt generation failed:', err);
+      showToast('Could not generate the receipt — please try again or report this.');
+    }
+  }
+
   return (
     <div>
       <div className="page-head">
@@ -143,14 +177,24 @@ export default function AccountRecords({ config }: { config: AccountConfig }) {
                   <td style={{ maxWidth: 220, color: 'var(--slate)', fontSize: 12 }}>{e.notes || '—'}</td>
                   <td>
                     <div className="row-actions">
-                      {e.kind === 'credit' && (
+                      {e.kind === 'credit' ? (
                         <>
                           <button type="button" className="btn small secondary" onClick={() => handleViewReceipt(e.id)}>
                             View
                           </button>
                           <WhatsAppShareButton phone={e.partyPhone} onShare={() => handleSendReceipt(e.id)} />
                         </>
+                      ) : (
+                        <>
+                          <button type="button" className="btn small secondary" onClick={() => handleViewExpenseReceipt(e.id)}>
+                            View
+                          </button>
+                          <WhatsAppShareButton phone={e.partyPhone} onShare={() => handleSendExpenseReceipt(e.id)} />
+                        </>
                       )}
+                      <Link to={`/${config.slug}/edit/${e.id}`} className="btn small secondary">
+                        Edit
+                      </Link>
                       <button type="button" className="btn small danger" onClick={() => handleDelete(e.id)}>
                         Delete
                       </button>

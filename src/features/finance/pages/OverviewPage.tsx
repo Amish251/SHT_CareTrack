@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useFinanceData } from '../store';
+import { categoryDisplay } from '../helpers';
 import { fmtDate } from '@/features/equipment-register/helpers';
 
 export default function OverviewPage() {
@@ -74,7 +75,7 @@ export default function OverviewPage() {
                       {e.kind === 'donation' ? 'Donation' : 'Expense'}
                     </span>
                   </td>
-                  <td>{e.category}</td>
+                  <td>{categoryDisplay(e)}</td>
                   <td>{e.partyName || '—'}</td>
                   <td className="mono">₹{e.amount.toLocaleString('en-IN')}</td>
                 </tr>
