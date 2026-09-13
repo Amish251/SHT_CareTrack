@@ -3,6 +3,7 @@ import { useAuth } from '@/shared/components/AuthGate';
 import { useToast } from '@/shared/components/ui/Toast';
 import { logActivity } from '@/shared/lib/activityLog';
 import { loadNamespaced, saveNamespaced } from '@/shared/lib/storage';
+import { DatabaseBackup } from 'lucide-react';
 
 const NAMESPACES = ['equipment-register', 'finance'] as const;
 
@@ -74,10 +75,15 @@ export default function BackupPage() {
   return (
     <div>
       <div className="page-head">
-        <div>
+        <div className="page-head-icon-row">
+          <div className="icon-badge">
+            <DatabaseBackup />
+          </div>
+          <div>
           <h2>Backup & Restore</h2>
           <p className="sub">Data lives in Supabase and is shared live across every device. Export a snapshot now and then anyway — it's your own offline copy.</p>
         </div>
+      </div>
       </div>
 
       <div className="panel">

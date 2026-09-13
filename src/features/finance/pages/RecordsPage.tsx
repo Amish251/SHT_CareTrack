@@ -8,6 +8,7 @@ import { useToast } from '@/shared/components/ui/Toast';
 import PdfPreviewModal from '@/shared/components/PdfPreviewModal';
 import WhatsAppShareButton from '@/shared/components/WhatsAppShareButton';
 import { logActivity } from '@/shared/lib/activityLog';
+import { Receipt } from 'lucide-react';
 
 export default function RecordsPage() {
   const [data, update] = useFinanceData();
@@ -126,10 +127,15 @@ export default function RecordsPage() {
   return (
     <div>
       <div className="page-head">
-        <div>
+        <div className="page-head-icon-row">
+          <div className="icon-badge">
+            <Receipt />
+          </div>
+          <div>
           <h2>All Records</h2>
           <p className="sub">Every donation and expense ever recorded.</p>
         </div>
+      </div>
       </div>
 
       <div className="toolbar">

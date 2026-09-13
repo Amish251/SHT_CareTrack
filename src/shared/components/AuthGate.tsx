@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState, type FormEvent, type ReactNode } from 'react';
+import { HeartPulse, UserRound, Lock } from 'lucide-react';
 import { initAuth, login as loginRequest, logout as logoutRequest, type Session } from '@/shared/lib/auth';
 import { logActivity } from '@/shared/lib/activityLog';
 import { useToast } from '@/shared/components/ui/Toast';
@@ -65,32 +66,41 @@ export default function AuthGate({ children }: { children: ReactNode }) {
       <div className="login-screen">
         <img className="login-bg" src="/login-bg.svg" alt="" aria-hidden="true" />
         <form className="login-card" onSubmit={handleSubmit}>
+          <div className="icon-badge" style={{ margin: '0 0 14px' }}>
+            <HeartPulse />
+          </div>
           <h2>CareTrack</h2>
           <p className="sub" style={{ marginBottom: 18 }}>Show Humanity Trust — sign in to continue</p>
 
           <div className="login-field">
             <label htmlFor="login-user">Username</label>
-            <input
-              id="login-user"
-              type="text"
-              required
-              autoFocus
-              autoComplete="username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-            />
+            <div className="field-icon">
+              <UserRound />
+              <input
+                id="login-user"
+                type="text"
+                required
+                autoFocus
+                autoComplete="username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+              />
+            </div>
           </div>
 
           <div className="login-field">
             <label htmlFor="login-pass">Password</label>
-            <input
-              id="login-pass"
-              type="password"
-              required
-              autoComplete="current-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
+            <div className="field-icon">
+              <Lock />
+              <input
+                id="login-pass"
+                type="password"
+                required
+                autoComplete="current-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
           </div>
 
           <div className="login-row">

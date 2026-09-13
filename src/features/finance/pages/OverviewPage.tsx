@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { useFinanceData } from '../store';
 import { categoryDisplay } from '../helpers';
 import { fmtDate } from '@/features/equipment-register/helpers';
+import { PiggyBank } from 'lucide-react';
 
 export default function OverviewPage() {
   const [data] = useFinanceData();
@@ -18,10 +19,15 @@ export default function OverviewPage() {
   return (
     <div>
       <div className="page-head">
-        <div>
+        <div className="page-head-icon-row">
+          <div className="icon-badge">
+            <PiggyBank />
+          </div>
+          <div>
           <h2>Donation Overview</h2>
           <p className="sub">Donations received and expenses paid out by the Trust.</p>
         </div>
+      </div>
         <Link to="/finance/add" className="btn small">
           + Add entry
         </Link>

@@ -9,6 +9,7 @@ import { useToast } from '@/shared/components/ui/Toast';
 import { logActivity } from '@/shared/lib/activityLog';
 import PdfPreviewModal from '@/shared/components/PdfPreviewModal';
 import WhatsAppShareButton from '@/shared/components/WhatsAppShareButton';
+import { Receipt } from 'lucide-react';
 
 export default function AccountRecords({ config }: { config: AccountConfig }) {
   const [data, update] = useAccountData(config.namespace);
@@ -127,10 +128,15 @@ export default function AccountRecords({ config }: { config: AccountConfig }) {
   return (
     <div>
       <div className="page-head">
-        <div>
+        <div className="page-head-icon-row">
+          <div className="icon-badge">
+            <Receipt />
+          </div>
+          <div>
           <h2>{config.title} — All Records</h2>
           <p className="sub">Every credit and debit entry recorded for {config.title}.</p>
         </div>
+      </div>
       </div>
 
       <div className="toolbar">

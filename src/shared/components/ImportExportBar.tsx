@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { FileSpreadsheet, FileText, Download, Upload, X, CheckCircle2 } from 'lucide-react';
 import { downloadSampleExcel, exportRowsToExcel, exportRowsToPdf, parseExcelFile } from '@/shared/lib/tableExport';
 import { useToast } from '@/shared/components/ui/Toast';
 
@@ -94,57 +95,108 @@ export default function ImportExportBar({
     }
   }
 
+  function handleChooseFile() {
+    fileRef.current?.click();
+  }
+
+  function handleDrop(e: React.DragEvent<HTMLDivElement>) {
+    e.preventDefault();
+    const dropped = e.dataTransfer.files?.[0];
+    if (dropped) setFile(dropped);
+  }
+
   return (
     <div style={{ marginBottom: 18 }}>
-      <div className="row-actions">
-        <button type="button" className="btn small secondary" onClick={() => setOpen((o) => !o)}>
+      <div className="ie-tabs">
+        <button type="button" className={`ie-tab ${open ? 'active' : ''}`} onClick={() => setOpen((o) => !o)}>
+          <span className="ie-tab-icon excel">
+            <FileSpreadsheet />
+          </span>
           Import Excel
         </button>
-        <button type="button" className="btn small secondary" onClick={handleExportExcel}>
+        <button type="button" className="ie-tab" onClick={handleExportExcel}>
+          <span className="ie-tab-icon excel">
+            <FileSpreadsheet />
+          </span>
           Export Excel
         </button>
-        <button type="button" className="btn small secondary" onClick={handleExportPdf}>
+        <button type="button" className="ie-tab" onClick={handleExportPdf}>
+          <span className="ie-tab-icon pdf">
+            <FileText />
+          </span>
           Export PDF
         </button>
       </div>
 
       {open && (
-        <div className="panel" style={{ marginTop: 10, marginBottom: 0 }}>
-          <p className="field-hint" style={{ marginBottom: 12 }}>
-            Upload an Excel file (.xlsx) to add {entityLabel} in bulk. Not sure of the columns needed?
-            Download the sample file below and fill it in the same format.
-          </p>
-          <div className="field-row" style={{ marginBottom: 12 }}>
-            <div>
-              <label htmlFor="import-excel-file">Excel file</label>
-              <input
-                ref={fileRef}
-                type="file"
-                id="import-excel-file"
-                accept=".xlsx,.xls"
-                onChange={(e) => setFile(e.target.files?.[0] || null)}
-              />
+        <div className="panel" style={{ marginTop: 4, marginBottom: 0 }}>
+          <div
+            className="dropzone"
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={handleDrop}
+            onClick={handleChooseFile}
+            role="button"
+            tabIndex={0}
+          >
+            <div className="dropzone-icon">
+              <FileSpreadsheet />
+              <span className="badge-dot">
+                <Upload />
+              </span>
             </div>
-          </div>
-          <div className="row-actions">
-            <button type="button" className="btn small" disabled={!file || busy} onClick={handleImport}>
-              {busy ? 'Importing…' : 'Import'}
-            </button>
+            <h4>{file ? file.name : 'Upload Excel file'}</h4>
+            <p className="sub">
+              {file
+                ? 'Ready to import — check it matches the sample format, then click Import below.'
+                : `Drag and drop your Excel file here, or click to browse. Adds ${entityLabel} in bulk.`}
+            </p>
             <button
               type="button"
-              className="btn small secondary"
-              onClick={() =>
-                downloadSampleExcel(sampleFilename, sampleHeaders, sampleRows).catch((err) => {
-                  console.error('Sample file download failed:', err);
-                  showToast('Could not generate the sample file — please try again.');
-                })
-              }
+              className="btn small"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleChooseFile();
+              }}
             >
-              Download sample file
+              Choose file
             </button>
-            <button type="button" className="btn small ghost" onClick={() => setOpen(false)}>
-              Cancel
-            </button>
+            <input
+              ref={fileRef}
+              type="file"
+              id="import-excel-file"
+              accept=".xlsx,.xls"
+              style={{ display: 'none' }}
+              onChange={(e) => setFile(e.target.files?.[0] || null)}
+            />
+          </div>
+
+          <div className="dropzone-footer">
+            <span className="dropzone-support">
+              <CheckCircle2 />
+              Supports .xlsx, .xls files
+            </span>
+            <div className="row-actions">
+              <button type="button" className="btn small" disabled={!file || busy} onClick={handleImport}>
+                {busy ? 'Importing…' : 'Import'}
+              </button>
+              <button
+                type="button"
+                className="btn small secondary"
+                onClick={() =>
+                  downloadSampleExcel(sampleFilename, sampleHeaders, sampleRows).catch((err) => {
+                    console.error('Sample file download failed:', err);
+                    showToast('Could not generate the sample file — please try again.');
+                  })
+                }
+              >
+                <Download size={14} style={{ marginRight: 6, verticalAlign: -2 }} />
+                Download sample file
+              </button>
+              <button type="button" className="btn small ghost" onClick={() => setOpen(false)}>
+                <X size={14} style={{ marginRight: 4, verticalAlign: -2 }} />
+                Cancel
+              </button>
+            </div>
           </div>
         </div>
       )}

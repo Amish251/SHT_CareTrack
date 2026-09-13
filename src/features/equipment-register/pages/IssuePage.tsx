@@ -8,6 +8,7 @@ import { useAuth } from '@/shared/components/AuthGate';
 import { logActivity } from '@/shared/lib/activityLog';
 import ImportExportBar, { type ImportResult } from '@/shared/components/ImportExportBar';
 import { pickField } from '@/shared/lib/tableExport';
+import { PackagePlus, UserRound, Phone, CalendarDays, IndianRupee } from 'lucide-react';
 
 interface LineItem {
   key: string;
@@ -242,10 +243,15 @@ export default function IssuePage() {
   return (
     <div>
       <div className="page-head">
-        <div>
+        <div className="page-head-icon-row">
+          <div className="icon-badge">
+            <PackagePlus />
+          </div>
+          <div>
           <h2>Issue Equipment</h2>
           <p className="sub">Give one or more equipment units to a patient against a refundable security deposit.</p>
         </div>
+      </div>
       </div>
 
       {data.types.length === 0 ? (
@@ -347,15 +353,18 @@ export default function IssuePage() {
                   </div>
                   <div>
                     <label htmlFor={`issue-token-${line.key}`}>Deposit (₹)</label>
-                    <input
-                      type="number"
-                      id={`issue-token-${line.key}`}
-                      min={0}
-                      step={1}
-                      required
-                      value={line.tokenAmount}
-                      onChange={(e) => handleLineTokenChange(line.key, e.target.value)}
-                    />
+                    <div className="field-icon">
+                      <IndianRupee />
+                      <input
+                        type="number"
+                        id={`issue-token-${line.key}`}
+                        min={0}
+                        step={1}
+                        required
+                        value={line.tokenAmount}
+                        onChange={(e) => handleLineTokenChange(line.key, e.target.value)}
+                      />
+                    </div>
                   </div>
                   <div style={{ flex: '0 0 auto' }}>
                     <button
@@ -386,42 +395,54 @@ export default function IssuePage() {
             <div className="field-row">
               <div>
                 <label htmlFor="issue-name">Patient name</label>
-                <input type="text" id="issue-name" required value={name} onChange={(e) => setName(e.target.value)} />
+                <div className="field-icon">
+                  <UserRound />
+                  <input type="text" id="issue-name" required value={name} onChange={(e) => setName(e.target.value)} />
+                </div>
               </div>
               <div>
                 <label htmlFor="issue-phone">Contact number</label>
-                <input
-                  type="tel"
-                  id="issue-phone"
-                  placeholder="10-digit mobile"
-                  required
-                  pattern="[0-9]{10}"
-                  title="Enter a 10-digit mobile number"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                />
+                <div className="field-icon">
+                  <Phone />
+                  <input
+                    type="tel"
+                    id="issue-phone"
+                    placeholder="10-digit mobile"
+                    required
+                    pattern="[0-9]{10}"
+                    title="Enter a 10-digit mobile number"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                  />
+                </div>
               </div>
             </div>
 
             <div className="field-row">
               <div>
                 <label htmlFor="issue-date">Issue date</label>
-                <input
-                  type="date"
-                  id="issue-date"
-                  required
-                  value={issueDate}
-                  onChange={(e) => setIssueDate(e.target.value)}
-                />
+                <div className="field-icon">
+                  <CalendarDays />
+                  <input
+                    type="date"
+                    id="issue-date"
+                    required
+                    value={issueDate}
+                    onChange={(e) => setIssueDate(e.target.value)}
+                  />
+                </div>
               </div>
               <div>
                 <label htmlFor="issue-return">Expected return date (optional)</label>
-                <input
-                  type="date"
-                  id="issue-return"
-                  value={expectedReturn}
-                  onChange={(e) => setExpectedReturn(e.target.value)}
-                />
+                <div className="field-icon">
+                  <CalendarDays />
+                  <input
+                    type="date"
+                    id="issue-return"
+                    value={expectedReturn}
+                    onChange={(e) => setExpectedReturn(e.target.value)}
+                  />
+                </div>
               </div>
             </div>
 

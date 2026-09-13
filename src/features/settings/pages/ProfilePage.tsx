@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { useAuth } from '@/shared/components/AuthGate';
 import { changePassword, verifyPassword } from '@/shared/lib/auth';
 import { useToast } from '@/shared/components/ui/Toast';
+import { UserCircle2 } from 'lucide-react';
 
 export default function ProfilePage() {
   const { session } = useAuth();
@@ -44,13 +45,18 @@ export default function ProfilePage() {
   return (
     <div>
       <div className="page-head">
-        <div>
+        <div className="page-head-icon-row">
+          <div className="icon-badge">
+            <UserCircle2 />
+          </div>
+          <div>
           <h2>My Login</h2>
           <p className="sub">
             Signed in as <strong>{session.username}</strong> ({session.role}). Change your own password here —
             an admin can also reset it from Settings → Users if you get locked out.
           </p>
         </div>
+      </div>
       </div>
 
       <div className="panel" style={{ maxWidth: 420 }}>

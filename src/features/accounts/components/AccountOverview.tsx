@@ -3,6 +3,7 @@ import { useAccountData } from '../store';
 import type { AccountConfig } from '../config';
 import { categoryDisplay } from '../helpers';
 import { fmtDate } from '@/features/equipment-register/helpers';
+import { PiggyBank } from 'lucide-react';
 
 export default function AccountOverview({ config }: { config: AccountConfig }) {
   const [data] = useAccountData(config.namespace);
@@ -19,10 +20,15 @@ export default function AccountOverview({ config }: { config: AccountConfig }) {
   return (
     <div>
       <div className="page-head">
-        <div>
+        <div className="page-head-icon-row">
+          <div className="icon-badge">
+            <PiggyBank />
+          </div>
+          <div>
           <h2>{config.title} — Overview</h2>
           <p className="sub">Credit and debit entries for {config.title}.</p>
         </div>
+      </div>
         <Link to={`/${config.slug}/add`} className="btn small">
           + Add entry
         </Link>

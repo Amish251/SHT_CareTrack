@@ -5,6 +5,7 @@ import { allocationsInGroup, fmtDate, typeById, unitById } from '../helpers';
 import { useToast } from '@/shared/components/ui/Toast';
 import PdfPreviewModal from '@/shared/components/PdfPreviewModal';
 import WhatsAppShareButton from '@/shared/components/WhatsAppShareButton';
+import { History } from 'lucide-react';
 
 export default function HistoryPage() {
   const [data, update] = useEquipmentData();
@@ -100,10 +101,15 @@ export default function HistoryPage() {
   return (
     <div>
       <div className="page-head">
-        <div>
+        <div className="page-head-icon-row">
+          <div className="icon-badge">
+            <History />
+          </div>
+          <div>
           <h2>Full History</h2>
           <p className="sub">Every allocation ever recorded — active and returned.</p>
         </div>
+      </div>
       </div>
 
       <div className="toolbar">

@@ -5,6 +5,7 @@ import { typeById, unitById } from '../helpers';
 import { useToast } from '@/shared/components/ui/Toast';
 import { useAuth } from '@/shared/components/AuthGate';
 import { logActivity } from '@/shared/lib/activityLog';
+import { PencilLine } from 'lucide-react';
 
 export default function EditAllocationPage() {
   const { id } = useParams();
@@ -92,13 +93,18 @@ export default function EditAllocationPage() {
   return (
     <div>
       <div className="page-head">
-        <div>
+        <div className="page-head-icon-row">
+          <div className="icon-badge">
+            <PencilLine />
+          </div>
+          <div>
           <h2>Edit Record</h2>
           <p className="sub">
             {type ? type.name : '—'} {found ? `(${found.unit.label})` : ''} — equipment and unit can't be changed
             here; delete and re-issue if that's wrong.
           </p>
         </div>
+      </div>
       </div>
 
       <div className="panel">

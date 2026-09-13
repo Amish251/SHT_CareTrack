@@ -7,6 +7,7 @@ import { useAuth } from '@/shared/components/AuthGate';
 import PdfPreviewModal from '@/shared/components/PdfPreviewModal';
 import WhatsAppShareButton from '@/shared/components/WhatsAppShareButton';
 import { logActivity } from '@/shared/lib/activityLog';
+import { PackageOpen } from 'lucide-react';
 
 export default function ActiveLoansPage() {
   const [data, update] = useEquipmentData();
@@ -156,10 +157,15 @@ export default function ActiveLoansPage() {
   return (
     <div>
       <div className="page-head">
-        <div>
+        <div className="page-head-icon-row">
+          <div className="icon-badge">
+            <PackageOpen />
+          </div>
+          <div>
           <h2>Active Loans</h2>
           <p className="sub">Equipment currently out with patients. Tap the deposit status to update it.</p>
         </div>
+      </div>
       </div>
 
       <div className="toolbar">

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { clearActivity, listActivity, type ActivityEntry } from '@/shared/lib/activityLog';
 import { useToast } from '@/shared/components/ui/Toast';
+import { ScrollText } from 'lucide-react';
 
 function fmtTimestamp(iso: string): string {
   const d = new Date(iso);
@@ -44,10 +45,15 @@ export default function LogPage() {
   return (
     <div>
       <div className="page-head">
-        <div>
+        <div className="page-head-icon-row">
+          <div className="icon-badge">
+            <ScrollText />
+          </div>
+          <div>
           <h2>Activity Log</h2>
           <p className="sub">Every recorded action across the app — visible only to the super admin.</p>
         </div>
+      </div>
         {entries.length > 0 && (
           <button type="button" className="btn small danger" onClick={handleClear}>
             Clear log

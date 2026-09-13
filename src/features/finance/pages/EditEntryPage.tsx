@@ -11,6 +11,7 @@ import {
 import { isOtherCategory } from '../helpers';
 import { useToast } from '@/shared/components/ui/Toast';
 import { logActivity } from '@/shared/lib/activityLog';
+import { PencilLine, IndianRupee, UserRound, Phone, CalendarDays } from 'lucide-react';
 
 /**
  * Edits an existing donation/expense entry. Same field set as AddEntryPage.
@@ -117,10 +118,15 @@ export default function EditEntryPage() {
   return (
     <div>
       <div className="page-head">
-        <div>
+        <div className="page-head-icon-row">
+          <div className="icon-badge">
+            <PencilLine />
+          </div>
+          <div>
           <h2>Edit Record</h2>
           <p className="sub">Changes here are reflected the next time this record's receipt is viewed or shared.</p>
         </div>
+      </div>
       </div>
 
       <div className="panel">
@@ -158,36 +164,48 @@ export default function EditEntryPage() {
             )}
             <div>
               <label htmlFor="edit-fin-amount">Amount (₹)</label>
-              <input
-                type="number"
-                id="edit-fin-amount"
-                min={1}
-                step={1}
-                required
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-              />
+              <div className="field-icon">
+                <IndianRupee />
+                <input
+                  type="number"
+                  id="edit-fin-amount"
+                  min={1}
+                  step={1}
+                  required
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                />
+              </div>
             </div>
           </div>
 
           <div className="field-row">
             <div>
               <label htmlFor="edit-fin-party">{kind === 'donation' ? 'Donor name' : 'Paid to'}</label>
-              <input type="text" id="edit-fin-party" value={partyName} onChange={(e) => setPartyName(e.target.value)} />
+              <div className="field-icon">
+                <UserRound />
+                <input type="text" id="edit-fin-party" value={partyName} onChange={(e) => setPartyName(e.target.value)} />
+              </div>
             </div>
             <div>
               <label htmlFor="edit-fin-party-phone">Contact number {kind === 'donation' && '(for the receipt)'}</label>
-              <input
-                type="tel"
-                id="edit-fin-party-phone"
-                placeholder="10-digit mobile"
-                value={partyPhone}
-                onChange={(e) => setPartyPhone(e.target.value)}
-              />
+              <div className="field-icon">
+                <Phone />
+                <input
+                  type="tel"
+                  id="edit-fin-party-phone"
+                  placeholder="10-digit mobile"
+                  value={partyPhone}
+                  onChange={(e) => setPartyPhone(e.target.value)}
+                />
+              </div>
             </div>
             <div>
               <label htmlFor="edit-fin-date">Date</label>
-              <input type="date" id="edit-fin-date" required value={date} onChange={(e) => setDate(e.target.value)} />
+              <div className="field-icon">
+                <CalendarDays />
+                <input type="date" id="edit-fin-date" required value={date} onChange={(e) => setDate(e.target.value)} />
+              </div>
             </div>
           </div>
 

@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useEquipmentData } from '../store';
 import { fmtDate, typeById, unitById } from '../helpers';
+import { Wallet } from 'lucide-react';
 
 export default function TokenOverviewPage() {
   const [data] = useEquipmentData();
@@ -32,10 +33,15 @@ export default function TokenOverviewPage() {
   return (
     <div>
       <div className="page-head">
-        <div>
+        <div className="page-head-icon-row">
+          <div className="icon-badge">
+            <Wallet />
+          </div>
+          <div>
           <h2>Token Overview</h2>
           <p className="sub">Security deposits — what's currently held, what's pending, and what's been returned.</p>
         </div>
+      </div>
       </div>
 
       <div className="grid" style={{ marginBottom: 28 }}>

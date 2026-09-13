@@ -3,6 +3,7 @@ import { useAuth } from '@/shared/components/AuthGate';
 import { addUser, deleteUser, listVisibleUsers, resetUserPassword, type AuthUser, type UserRole } from '@/shared/lib/auth';
 import { useToast } from '@/shared/components/ui/Toast';
 import { logActivity } from '@/shared/lib/activityLog';
+import { Users } from 'lucide-react';
 
 export default function UsersPage() {
   const { session } = useAuth();
@@ -83,10 +84,15 @@ export default function UsersPage() {
   return (
     <div>
       <div className="page-head">
-        <div>
+        <div className="page-head-icon-row">
+          <div className="icon-badge">
+            <Users />
+          </div>
+          <div>
           <h2>Users</h2>
           <p className="sub">Everyone who can sign in to this app, with their own login.</p>
         </div>
+      </div>
       </div>
 
       <div className="panel">

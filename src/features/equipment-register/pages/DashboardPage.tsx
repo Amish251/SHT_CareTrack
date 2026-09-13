@@ -8,6 +8,7 @@ import { useToast } from '@/shared/components/ui/Toast';
 import { logActivity } from '@/shared/lib/activityLog';
 import ImportExportBar, { type ImportResult } from '@/shared/components/ImportExportBar';
 import { pickField } from '@/shared/lib/tableExport';
+import { LayoutDashboard } from 'lucide-react';
 
 export default function DashboardPage() {
   const [data, update] = useEquipmentData();
@@ -189,10 +190,15 @@ export default function DashboardPage() {
   return (
     <div>
       <div className="page-head">
-        <div>
+        <div className="page-head-icon-row">
+          <div className="icon-badge">
+            <LayoutDashboard />
+          </div>
+          <div>
           <h2>Dashboard</h2>
           <p className="sub">Live snapshot of every equipment type in the store room.</p>
         </div>
+      </div>
       </div>
 
       <div className="grid" style={{ marginBottom: 28 }}>
