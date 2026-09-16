@@ -1425,3 +1425,62 @@ particularly paging through a listing with more than 10 rows.
 **Not changed:** all page routes, every handler, the receipt/PDF code,
 Supabase schema, RLS, Edge Function. `git diff --stat` should show only
 the 10 touched `.tsx`/`.css` files plus the 2 new components.
+
+### This session — a real overview Dashboard (Equipment & Stock, Donation, Ambaji, SEOC side by side)
+
+The person clarified an earlier request: "Dashboard" should be a genuine
+cross-module overview, not the equipment-management page that got
+renamed to "Equipment & Stock" last session. Those are now two separate
+pages.
+
+**New route: `/dashboard`, admin/superadmin only** (`AdminOnly`-wrapped
+in `App.tsx`, same pattern as every other admin-only route — staff
+can't reach it even by typing the URL directly). New standalone sidebar
+entry above Equipment Register, with no sub-pages of its own — the
+`Sidebar.tsx` `NavItem`/`NavChild` types already supported an empty
+`children: []`, but the subgroup `<div>` was unconditionally rendered
+whenever a module was "active," which would've shown a hollow empty box
+under Dashboard's link. Added a `visibleChildren.length > 0` guard so a
+childless nav item just doesn't render a subgroup at all.
+
+**`HomeRedirect` now sends admin/superadmin here by default** instead
+of to Equipment & Stock — this page is what "landing in the app" should
+mean for an admin now. Staff still land on Issue Equipment, unchanged.
+
+**New page**: `src/features/dashboard/pages/DashboardPage.tsx`. Reads
+all four data sources at once — `useEquipmentData()`, `useFinanceData()`,
+and `useAccountData()` for both Ambaji and SEOC — and renders four
+separate `ModulePanel`s, each a distinctly bordered/coloured glass panel
+(blue = Equipment & Stock, green = Donation, amber = Ambaji, violet =
+SEOC — new `.module-panel-*` CSS variants and an added `.icon-badge.violet`
+in `tokens.css`), each with its own icon, title, one-line description,
+a "View details →" link through to that module's real page, and a grid
+of stat cards:
+
+- **Equipment & Stock**: Equipment Types, Total Units, Available,
+  Engaged, Active Loans, Returned Items, Token Held, Token Pending,
+  Token Returned — the last three use the exact same held/pending/
+  returned definitions as `TokenOverviewPage.tsx` (deposit collected +
+  still on loan / issued but not yet collected / returned with deposit
+  presumed refunded), so the two pages can't quietly disagree with each
+  other.
+- **Donation**: Total Donations, Total Expenses, Balance — identical
+  calculation to `finance/pages/OverviewPage.tsx`.
+- **Ambaji / SEOC**: Total Credit, Total Debit, Balance each, using
+  `ACCOUNTS.ambaji`/`ACCOUNTS.seoc` from `features/accounts/config.ts`
+  so the titles and routes stay in sync with that config rather than
+  being hand-typed a second time.
+
+**Verification.** `npm run build` clean, no type errors. Visually
+checked via the same static-harness approach as prior UI sessions
+(desktop full-page and mobile 390px) — confirmed the four panels render
+with distinct accent colours and stack correctly on mobile. As always:
+this is reproduction markup built from the compiled CSS, not the
+running app against live Supabase data, so a real click-through (does
+the "View details" link on each panel actually land on the right page,
+do the numbers match what Equipment & Stock/Donation/Ambaji/SEOC show
+on their own pages) is worth doing after deploy.
+
+**Scope check**: diffed against the last delivered zip — only
+`App.tsx`, `Sidebar.tsx`, `tokens.css`, and the new `features/dashboard/`
+folder changed. No existing page, handler, or Supabase file touched.

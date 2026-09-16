@@ -4,6 +4,7 @@ import { useAuth } from './shared/components/AuthGate';
 import AdminOnly from './shared/components/AdminOnly';
 import SuperAdminOnly from './shared/components/SuperAdminOnly';
 import DashboardPage from './features/equipment-register/pages/DashboardPage';
+import MainDashboardPage from './features/dashboard/pages/DashboardPage';
 import IssuePage from './features/equipment-register/pages/IssuePage';
 import ActiveLoansPage from './features/equipment-register/pages/ActiveLoansPage';
 import HistoryPage from './features/equipment-register/pages/HistoryPage';
@@ -26,13 +27,12 @@ import ProfilePage from './features/settings/pages/ProfilePage';
 import BackupPage from './features/settings/pages/BackupPage';
 import LogPage from './features/settings/pages/LogPage';
 
-/** Admins (and the super admin) land on the Equipment Dashboard; staff (who
- *  can't see Dashboard or Donation) land on Issue Equipment instead — their
- *  first allowed page. */
+/** Admins (and the super admin) land on the overview Dashboard; staff (who
+ *  can't see it) land on Issue Equipment instead — their first allowed page. */
 function HomeRedirect() {
   const { session } = useAuth();
   const isAdminLike = session.role === 'admin' || session.role === 'superadmin';
-  return <Navigate to={isAdminLike ? '/equipment-register' : '/equipment-register/issue'} replace />;
+  return <Navigate to={isAdminLike ? '/dashboard' : '/equipment-register/issue'} replace />;
 }
 
 /** Admins (and the super admin) land on Users first; staff (who can't see
@@ -48,6 +48,17 @@ export default function App() {
     <Routes>
       <Route element={<AppShell />}>
         <Route path="/" element={<HomeRedirect />} />
+
+        {/* The overview Dashboard — Equipment & Stock, Donation, Ambaji, and SEOC data
+            side by side. Admin and super admin only; staff never see this route. */}
+        <Route
+          path="/dashboard"
+          element={
+            <AdminOnly message="The dashboard is limited to admin accounts.">
+              <MainDashboardPage />
+            </AdminOnly>
+          }
+        />
 
         {/* Equipment Register module — nav lives in the sidebar now, see app/layout/Sidebar.tsx.
             Dashboard (adding equipment types) is admin-only; staff can issue, view active loans,

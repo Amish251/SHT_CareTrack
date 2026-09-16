@@ -26,6 +26,13 @@ interface NavItem {
 // Add a new object to this array when a new feature module is scaffolded.
 const NAV_ITEMS: NavItem[] = [
   {
+    to: '/dashboard',
+    label: 'Dashboard',
+    tag: 'DB',
+    adminOnly: true,
+    children: []
+  },
+  {
     to: '/equipment-register',
     label: 'Equipment Register',
     tag: 'ER',
@@ -125,7 +132,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
                 <span className="tag">{item.tag}</span>
                 {item.label}
               </NavLink>
-              {isActiveModule && (
+              {isActiveModule && visibleChildren.length > 0 && (
                 <div className="nav-subgroup">
                   {visibleChildren.map((child) => (
                     <NavLink

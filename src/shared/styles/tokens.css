@@ -346,6 +346,7 @@ h1, h2, h3, .display {
 .icon-badge.sage { background: linear-gradient(135deg, rgba(16,185,129,.95) 0%, rgba(4,120,87,.95) 100%); box-shadow: 0 10px 24px rgba(4, 120, 87, .30), inset 0 1px 0 rgba(255,255,255,.32); }
 .icon-badge.marigold { background: linear-gradient(135deg, rgba(245,158,11,.95) 0%, rgba(180,83,9,.95) 100%); box-shadow: 0 10px 24px rgba(180, 83, 9, .30), inset 0 1px 0 rgba(255,255,255,.32); }
 .icon-badge.rust { background: linear-gradient(135deg, rgba(248,113,113,.95) 0%, rgba(239,68,68,.95) 100%); box-shadow: 0 10px 24px rgba(239, 68, 68, .30), inset 0 1px 0 rgba(255,255,255,.32); }
+.icon-badge.violet { background: linear-gradient(135deg, rgba(167,139,250,.95) 0%, rgba(124,58,237,.95) 100%); box-shadow: 0 10px 24px rgba(124, 58, 237, .30), inset 0 1px 0 rgba(255,255,255,.32); }
 
 /* ---------- Icon-prefixed fields ----------
    Wraps just the <input>/<select> (not the <label>), so the icon centers on
@@ -542,6 +543,17 @@ h1, h2, h3, .display {
 }
 .panel h3 { font-size: 16px; margin: 0 0 17px; display: flex; align-items: center; gap: 8px; }
 .panel-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
+
+/* ---------- Dashboard module panels ----------
+   Each module (Equipment & Stock, Donation, Ambaji, SEOC) gets its own glass
+   panel with a coloured top accent, so the four sections read as clearly
+   separate at a glance even though they share the same card/grid layout. */
+.module-panel { border-top: 4px solid var(--module-accent, var(--primary)); margin-bottom: 22px; }
+.module-panel-equipment { --module-accent: #2563eb; }
+.module-panel-donation { --module-accent: #10b981; }
+.module-panel-ambaji { --module-accent: #f59e0b; }
+.module-panel-seoc { --module-accent: #8b5cf6; }
+.module-panel .card { background: rgba(255, 255, 255, 0.55); }
 .field-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 16px; margin-bottom: 16px; }
 label {
   display: block; font-size: 10.5px; font-weight: 700; text-transform: uppercase;
