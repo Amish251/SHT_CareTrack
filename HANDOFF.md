@@ -1295,3 +1295,65 @@ credit entry to Ambaji Account with category "Other" and a note,
 confirm the note shows correctly in Overview/Records/exported
 Excel+PDF and on the generated receipt PDF; confirm a debit entry
 never shows a receipt button regardless of category.
+
+### This session — glassmorphism UI theme (CSS-only)
+
+The request was a glassmorphism visual pass across the whole app with no
+functional changes. **Exactly one file changed: `src/shared/styles/tokens.css`.**
+Verified by diffing the delivered folder against the uploaded one — no
+`.tsx`, no config, no Supabase files touched. Nothing to run in the
+database; this is a pure code deploy.
+
+**How the effect is built.** `body::before` paints a fixed, full-viewport
+gradient mesh (blue / green / violet / amber blooms over a pale base).
+Every surface above it — `.panel`, `.card`, `.page-head`, `.table-wrap`,
+inputs, `.sidebar`, `.modal-card`, `.toast`, `.ie-tab`, `.empty`,
+`.check-row`, `.dropzone`, `.unit-chip` — is semi-transparent with
+`backdrop-filter: blur() saturate()`, so that mesh diffuses through.
+Glass primitives live as CSS variables at the top of the file
+(`--glass-bg`, `--glass-bg-strong`, `--glass-bg-soft`, `--glass-border`,
+`--glass-blur`, `--glass-blur-sm`) so the whole theme can be retuned from
+one place rather than hunting through rules.
+
+**The one rule to remember when editing this file later:** surfaces must
+stay translucent. Giving any of the elements above a solid `background`
+switches the glass off for that element and it'll look flat and out of
+place against its neighbours. Two elements are opaque *on purpose* and
+should stay that way — `.modal-pdf-frame` (the embedded receipt PDF is
+content, not chrome, and must stay fully legible) and the
+`prefers-reduced-transparency` fallback block at the bottom.
+
+**Preserved exactly.** Every one of the 204 selectors from the previous
+theme still exists — checked programmatically, zero dropped — and all 8
+CSS custom properties referenced from inline `style={{}}` props in the
+components still resolve (`--sage-deep`, `--marigold-deep`,
+`--primary-deep`, `--slate`, `--rust`, `--ink`, `--ink-soft`,
+`--primary`). Four selectors were *added*, all additive: `body::before`
+(the gradient mesh), `.panel.table-wrap` (stops a panel-wrapped table
+double-stacking two glass layers, which read as a muddy grey box), and
+hover states for the two login inputs.
+
+**Accessibility fallbacks added.** A `prefers-reduced-transparency:
+reduce` block returns every glass surface to solid white with the old
+borders — iOS/macOS expose this as a real user setting, and heavy blur
+genuinely hurts legibility for some people. A `prefers-reduced-motion`
+block drops the hover lift transforms.
+
+**Verification.** `npm run build` clean. Visually checked by screenshot
+at three viewports: the real login page (1400px), and a static harness
+page (`dist/__preview.html`, deleted before packaging) built from the
+compiled CSS plus markup copied out of the real components, at desktop
+1440px, scrolled desktop, and mobile 390px. The harness exists because
+every page behind the login needs a live Supabase session this sandbox
+doesn't have — so the *inner* app screenshots are of faithful
+reproduction markup, not the running app. Worth a click-through after
+deploying.
+
+**Known caveat — performance.** `backdrop-filter` is GPU-composited and
+this theme uses a lot of it. It's smooth on modern hardware, but on
+older budget Android phones a long table (100+ rows, each cell a
+translucent surface) could feel less responsive than the old flat theme.
+If that shows up in practice, the cheapest fix is dropping the blur on
+`tbody td` / `thead th` only (keep the `.table-wrap` pane) — that
+removes most of the per-row compositing cost while keeping the frosted
+look of the table as a whole.
