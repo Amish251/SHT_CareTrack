@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { useEquipmentData } from '../store';
 import { allocationsInGroup, fmtDate, typeById, unitById } from '../helpers';
 import { useToast } from '@/shared/components/ui/Toast';
 import PdfPreviewModal from '@/shared/components/PdfPreviewModal';
 import WhatsAppShareButton from '@/shared/components/WhatsAppShareButton';
-import { History } from 'lucide-react';
+import Pagination, { usePagination } from '@/shared/components/Pagination';
+import { IconButton, IconLink } from '@/shared/components/RowActions';
+import { History, Eye, Pencil, Trash2 } from 'lucide-react';
 
 export default function HistoryPage() {
   const [data, update] = useEquipmentData();
@@ -30,6 +31,8 @@ export default function HistoryPage() {
         return true;
       });
   }, [data.allocations, query, typeFilter, statusFilter]);
+
+  const pager = usePagination(rows, 10);
 
   function handleDelete(allocationId: string) {
     const allocation = data.allocations.find((a) => a.id === allocationId);
@@ -145,7 +148,7 @@ export default function HistoryPage() {
               <th>Issued</th>
               <th>Returned</th>
               <th>Status</th>
-              <th />
+              <th className="col-actions">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -156,7 +159,7 @@ export default function HistoryPage() {
                 </td>
               </tr>
             ) : (
-              rows.map((a) => {
+              pager.pageItems.map((a) => {
                 const t = typeById(data, a.typeId);
                 const found = unitById(data, a.unitId);
                 const group = allocationsInGroup(data, a);
@@ -188,22 +191,25 @@ export default function HistoryPage() {
                     <td>
                       <span className={`pill ${a.status}`}>{a.status === 'active' ? 'Active' : 'Returned'}</span>
                     </td>
-                    <td>
+                    <td className="col-actions">
                       <div className="row-actions">
                         {a.depositGiven && (
                           <>
-                            <button type="button" className="btn small secondary" onClick={() => handleViewReceipt(a.id)}>
-                              View
-                            </button>
-                            <WhatsAppShareButton phone={a.patientPhone} onShare={() => handleSendReceipt(a.id)} />
+                            <IconButton icon={<Eye />} label="View receipt" onClick={() => handleViewReceipt(a.id)} />
+                            <WhatsAppShareButton
+                              iconOnly
+                              phone={a.patientPhone}
+                              onShare={() => handleSendReceipt(a.id)}
+                            />
                           </>
                         )}
-                        <Link to={`/equipment-register/edit/${a.id}`} className="btn small secondary">
-                          Edit
-                        </Link>
-                        <button type="button" className="btn small danger" onClick={() => handleDelete(a.id)}>
-                          Delete
-                        </button>
+                        <IconLink icon={<Pencil />} label="Edit record" to={`/equipment-register/edit/${a.id}`} />
+                        <IconButton
+                          icon={<Trash2 />}
+                          label="Delete record"
+                          variant="danger"
+                          onClick={() => handleDelete(a.id)}
+                        />
                       </div>
                     </td>
                   </tr>
@@ -212,6 +218,16 @@ export default function HistoryPage() {
             )}
           </tbody>
         </table>
+        <Pagination
+          page={pager.page}
+          totalPages={pager.totalPages}
+          total={pager.total}
+          from={pager.from}
+          to={pager.to}
+          pageSize={pager.pageSize}
+          onPageChange={pager.setPage}
+          onPageSizeChange={pager.setPageSize}
+        />
       </div>
 
       {preview && <PdfPreviewModal url={preview.url} title={preview.title} onClose={closePreview} />}

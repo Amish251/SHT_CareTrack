@@ -196,19 +196,65 @@ h1, h2, h3, .display {
   color: rgba(255,255,255,.60);
   border-top: 1px solid rgba(255,255,255,.12);
 }
+/* Signed-in identity block: name on its own line, the sign-out control given
+   real breathing room beneath it rather than butting up against the text. */
+.sidebar-user {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: flex-start;
+}
+.sidebar-user-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  width: 100%;
+}
+.sidebar-user-avatar {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,.12);
+  border: 1px solid rgba(255,255,255,.16);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  font-family: 'IBM Plex Sans', sans-serif;
+}
+.sidebar-user-meta { display: flex; flex-direction: column; min-width: 0; line-height: 1.3; }
+.sidebar-user-label { display: block; font-size: 9px; letter-spacing: .08em; text-transform: uppercase; color: rgba(255,255,255,.42); }
+.sidebar-user-value {
+  display: block; font-size: 12.5px; font-weight: 600; color: #fff;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
 .logout-link {
-  display: inline-block;
-  margin-top: 7px;
-  background: rgba(255,255,255,.09);
-  border: 1px solid rgba(255,255,255,.14);
-  padding: 5px 9px;
-  border-radius: 8px;
-  font-size: 10.5px;
-  color: rgba(255,255,255,.72);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: 100%;
+  background: rgba(255,255,255,.08);
+  border: 1px solid rgba(255,255,255,.16);
+  padding: 9px 12px;
+  border-radius: 10px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: rgba(255,255,255,.80);
   cursor: pointer;
   transition: .15s ease;
 }
-.logout-link:hover { color: #fff; background: rgba(255,255,255,.16); }
+.logout-link svg { width: 14px; height: 14px; }
+.logout-link:hover {
+  color: #fff;
+  background: rgba(239, 68, 68, .22);
+  border-color: rgba(239, 68, 68, .45);
+}
 .sidebar-credits {
   margin-top: 12px;
   padding-top: 12px;
@@ -587,6 +633,99 @@ button.btn:disabled:hover { background: linear-gradient(135deg, rgba(59,130,246,
 .row-actions { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
 .row-actions .btn.small { padding: 6px 10px; font-size: 11px; }
 
+/* ---------- Icon-only row actions ----------
+   Square glass buttons used in table "Actions" columns. Meaning is carried by
+   title + aria-label on each button, never by visible text — see RowActions.tsx. */
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  padding: 0;
+  border-radius: 9px;
+  cursor: pointer;
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg-strong);
+  backdrop-filter: blur(var(--glass-blur-sm));
+  -webkit-backdrop-filter: blur(var(--glass-blur-sm));
+  color: var(--ink-soft);
+  text-decoration: none;
+  box-shadow: 0 3px 10px rgba(15,36,57,.07), inset 0 1px 0 rgba(255,255,255,.55);
+  transition: transform .14s ease, background .14s ease, color .14s ease, border-color .14s ease, box-shadow .14s ease;
+}
+.icon-btn svg { width: 15px; height: 15px; }
+.icon-btn:hover {
+  transform: translateY(-1px);
+  background: rgba(255,255,255,.88);
+  color: var(--primary-deep);
+  border-color: rgba(255,255,255,.92);
+  box-shadow: 0 6px 16px rgba(15,36,57,.12);
+}
+.icon-btn.primary { background: linear-gradient(135deg, rgba(59,130,246,.95), rgba(29,78,216,.95)); color: #fff; border-color: rgba(255,255,255,.26); }
+.icon-btn.primary:hover { background: linear-gradient(135deg, rgba(29,78,216,.98), rgba(30,64,175,.98)); color: #fff; }
+.icon-btn.danger { color: var(--rust); border-color: rgba(239,68,68,.34); }
+.icon-btn.danger:hover { background: rgba(255,241,240,.92); color: #c53030; border-color: rgba(239,68,68,.62); }
+.icon-btn.whatsapp { background: linear-gradient(135deg, rgba(37,211,102,.95), rgba(29,168,81,.95)); color: #fff; border-color: rgba(255,255,255,.26); }
+.icon-btn.whatsapp:hover { background: linear-gradient(135deg, rgba(29,168,81,.98), rgba(22,140,67,.98)); color: #fff; }
+.icon-btn:disabled { opacity: .42; cursor: not-allowed; transform: none; box-shadow: none; }
+.icon-btn:disabled:hover { transform: none; }
+/* Keep the Actions column from wrapping icons onto a second line. */
+th.col-actions, td.col-actions { white-space: nowrap; width: 1%; }
+td.col-actions .row-actions { flex-wrap: nowrap; }
+
+/* ---------- Pagination ---------- */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur)) saturate(150%);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(150%);
+  box-shadow: var(--shadow);
+}
+.pagination-size { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
+.pagination-size label { margin: 0; font-size: 10.5px; }
+.pagination-size select { width: auto; min-width: 74px; min-height: 34px; padding: 6px 10px; font-size: 12.5px; }
+.pagination-count { font-size: 11.5px; color: var(--slate); }
+.pagination-pages { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+.page-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  height: 32px;
+  padding: 0 8px;
+  border-radius: 9px;
+  cursor: pointer;
+  font-size: 12.5px;
+  font-weight: 600;
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg-strong);
+  backdrop-filter: blur(var(--glass-blur-sm));
+  -webkit-backdrop-filter: blur(var(--glass-blur-sm));
+  color: var(--ink-soft);
+  transition: background .14s ease, color .14s ease, border-color .14s ease, transform .14s ease;
+}
+.page-btn svg { width: 15px; height: 15px; }
+.page-btn:hover:not(:disabled):not(.active) { background: rgba(255,255,255,.88); color: var(--primary-deep); transform: translateY(-1px); }
+.page-btn.active {
+  background: linear-gradient(135deg, rgba(59,130,246,.95), rgba(29,78,216,.95));
+  color: #fff;
+  border-color: rgba(255,255,255,.26);
+  box-shadow: 0 6px 16px rgba(37,99,235,.28), inset 0 1px 0 rgba(255,255,255,.28);
+  cursor: default;
+}
+.page-btn:disabled { opacity: .40; cursor: not-allowed; }
+.page-gap { padding: 0 3px; color: var(--slate); font-size: 12.5px; user-select: none; }
+
 /* ---------- Tables ----------
    The wrapper carries the glass pane; rows stay near-transparent so the
    frosted surface reads as one continuous sheet rather than stacked boxes. */
@@ -634,6 +773,18 @@ tbody tr:hover td { background: rgba(255, 255, 255, 0.46); }
   box-shadow: var(--shadow);
 }
 .empty .display { font-size: 17px; color: var(--ink); margin-bottom: 6px; }
+/* Heading row for a sub-section (e.g. "Recent entries") with an action on the
+   right, such as a "View all" link through to the full paginated listing. */
+.section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.section-head h3 { font-size: 15px; margin: 0; }
+
 .toolbar { display: flex; gap: 9px; margin-bottom: 17px; flex-wrap: wrap; align-items: center; }
 .toolbar input, .toolbar select { width: auto; min-width: 170px; }
 
@@ -746,6 +897,13 @@ tbody tr:hover td { background: rgba(255, 255, 255, 0.46); }
   .row-actions .btn.small { flex: 0 1 auto; }
   .check-row { width: 100%; }
   .table-wrap { margin-left: -2px; margin-right: -2px; }
+  /* Icon buttons must stay square on mobile — the generic `.btn { width:100% }`
+     rule above would otherwise stretch them across the row. */
+  .icon-btn { width: 34px; height: 34px; }
+  .pagination { flex-direction: column; align-items: stretch; gap: 11px; padding: 12px; }
+  .pagination-size { justify-content: space-between; width: 100%; }
+  .pagination-pages { justify-content: center; }
+  .page-btn { min-width: 34px; height: 34px; }
   .modal-backdrop { padding: 12px; }
   .modal-card { border-radius: 16px; }
   .modal-pdf-frame { height: 72vh; }
@@ -773,7 +931,8 @@ tbody tr:hover td { background: rgba(255, 255, 255, 0.46); }
    motion sick or lose legibility with heavy blur, and Safari/iOS exposes this
    as a real accessibility setting. Falls back to solid surfaces. */
 @media (prefers-reduced-transparency: reduce) {
-  .page-head, .panel, .card, .ie-tab, .empty, .table-wrap, .modal-card, .check-row, .dropzone {
+  .page-head, .panel, .card, .ie-tab, .empty, .table-wrap, .modal-card, .check-row, .dropzone,
+  .pagination, .icon-btn, .page-btn {
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
     background: #ffffff;
@@ -789,7 +948,8 @@ tbody tr:hover td { background: rgba(255, 255, 255, 0.46); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .card:hover, .btn:hover, .ie-tab:hover, .sidebar nav a:hover { transform: none; }
+  .card:hover, .btn:hover, .ie-tab:hover, .sidebar nav a:hover,
+  .icon-btn:hover, .page-btn:hover { transform: none; }
 }
 
 /* ---------- Icon-field padding override (kept at end of file so it always

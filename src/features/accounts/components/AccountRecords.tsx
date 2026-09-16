@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { useAccountData } from '../store';
 import type { AccountEntryKind } from '../types';
 import type { AccountConfig } from '../config';
@@ -9,7 +8,9 @@ import { useToast } from '@/shared/components/ui/Toast';
 import { logActivity } from '@/shared/lib/activityLog';
 import PdfPreviewModal from '@/shared/components/PdfPreviewModal';
 import WhatsAppShareButton from '@/shared/components/WhatsAppShareButton';
-import { Receipt } from 'lucide-react';
+import Pagination, { usePagination } from '@/shared/components/Pagination';
+import { IconButton, IconLink } from '@/shared/components/RowActions';
+import { Receipt, Eye, Pencil, Trash2 } from 'lucide-react';
 
 export default function AccountRecords({ config }: { config: AccountConfig }) {
   const [data, update] = useAccountData(config.namespace);
@@ -32,6 +33,8 @@ export default function AccountRecords({ config }: { config: AccountConfig }) {
         return true;
       });
   }, [data.entries, query, kindFilter]);
+
+  const pager = usePagination(rows, 10);
 
   function handleDelete(id: string) {
     if (!confirm('Delete this entry? This cannot be undone.')) return;
@@ -163,7 +166,7 @@ export default function AccountRecords({ config }: { config: AccountConfig }) {
               <th>Party</th>
               <th>Amount</th>
               <th>Notes</th>
-              <th />
+              <th className="col-actions">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -174,7 +177,7 @@ export default function AccountRecords({ config }: { config: AccountConfig }) {
                 </td>
               </tr>
             ) : (
-              rows.map((e) => (
+              pager.pageItems.map((e) => (
                 <tr key={e.id}>
                   <td>{fmtDate(e.date)}</td>
                   <td>
@@ -189,29 +192,26 @@ export default function AccountRecords({ config }: { config: AccountConfig }) {
                   </td>
                   <td className="mono">₹{e.amount.toLocaleString('en-IN')}</td>
                   <td style={{ maxWidth: 220, color: 'var(--slate)', fontSize: 12 }}>{e.notes || '—'}</td>
-                  <td>
+                  <td className="col-actions">
                     <div className="row-actions">
                       {e.kind === 'credit' ? (
                         <>
-                          <button type="button" className="btn small secondary" onClick={() => handleViewReceipt(e.id)}>
-                            View
-                          </button>
-                          <WhatsAppShareButton phone={e.partyPhone} onShare={() => handleSendReceipt(e.id)} />
+                          <IconButton icon={<Eye />} label="View receipt" onClick={() => handleViewReceipt(e.id)} />
+                          <WhatsAppShareButton iconOnly phone={e.partyPhone} onShare={() => handleSendReceipt(e.id)} />
                         </>
                       ) : (
                         <>
-                          <button type="button" className="btn small secondary" onClick={() => handleViewExpenseReceipt(e.id)}>
-                            View
-                          </button>
-                          <WhatsAppShareButton phone={e.partyPhone} onShare={() => handleSendExpenseReceipt(e.id)} />
+                          <IconButton icon={<Eye />} label="View receipt" onClick={() => handleViewExpenseReceipt(e.id)} />
+                          <WhatsAppShareButton iconOnly phone={e.partyPhone} onShare={() => handleSendExpenseReceipt(e.id)} />
                         </>
                       )}
-                      <Link to={`/${config.slug}/edit/${e.id}`} className="btn small secondary">
-                        Edit
-                      </Link>
-                      <button type="button" className="btn small danger" onClick={() => handleDelete(e.id)}>
-                        Delete
-                      </button>
+                      <IconLink icon={<Pencil />} label="Edit entry" to={`/${config.slug}/edit/${e.id}`} />
+                      <IconButton
+                        icon={<Trash2 />}
+                        label="Delete entry"
+                        variant="danger"
+                        onClick={() => handleDelete(e.id)}
+                      />
                     </div>
                   </td>
                 </tr>
@@ -219,6 +219,17 @@ export default function AccountRecords({ config }: { config: AccountConfig }) {
             )}
           </tbody>
         </table>
+        <Pagination
+          page={pager.page}
+          totalPages={pager.totalPages}
+          total={pager.total}
+          from={pager.from}
+          to={pager.to}
+          pageSize={pager.pageSize}
+          onPageChange={pager.setPage}
+          onPageSizeChange={pager.setPageSize}
+          label="entries"
+        />
       </div>
 
       {preview && <PdfPreviewModal url={preview.url} title={preview.title} onClose={closePreview} />}

@@ -1,7 +1,8 @@
+import { Link } from 'react-router-dom';
 import { useMemo } from 'react';
 import { useEquipmentData } from '../store';
 import { fmtDate, typeById, unitById } from '../helpers';
-import { Wallet } from 'lucide-react';
+import { Wallet, ArrowRight } from 'lucide-react';
 
 export default function TokenOverviewPage() {
   const [data] = useEquipmentData();
@@ -68,7 +69,12 @@ export default function TokenOverviewPage() {
         </div>
       </div>
 
-      <h3 style={{ fontSize: 15, marginBottom: 12 }}>Recent activity</h3>
+      <div className="section-head">
+        <h3>Recent activity</h3>
+        <Link to="/equipment-register/history" className="btn small secondary">
+          View all <ArrowRight />
+        </Link>
+      </div>
       {recent.length === 0 ? (
         <div className="empty">
           <div className="display">Nothing recorded yet</div>

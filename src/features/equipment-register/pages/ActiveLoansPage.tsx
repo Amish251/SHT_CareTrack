@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { useEquipmentData } from '../store';
 import { allocationsInGroup, fmtDate, todayStr, typeById, unitById } from '../helpers';
 import { useToast } from '@/shared/components/ui/Toast';
@@ -7,7 +6,9 @@ import { useAuth } from '@/shared/components/AuthGate';
 import PdfPreviewModal from '@/shared/components/PdfPreviewModal';
 import WhatsAppShareButton from '@/shared/components/WhatsAppShareButton';
 import { logActivity } from '@/shared/lib/activityLog';
-import { PackageOpen } from 'lucide-react';
+import Pagination, { usePagination } from '@/shared/components/Pagination';
+import { IconButton, IconLink } from '@/shared/components/RowActions';
+import { PackageOpen, Eye, Pencil, Trash2, Undo2 } from 'lucide-react';
 
 export default function ActiveLoansPage() {
   const [data, update] = useEquipmentData();
@@ -36,6 +37,8 @@ export default function ActiveLoansPage() {
       })
       .sort((a, b) => (a.issueDate < b.issueDate ? 1 : -1));
   }, [data, query, typeFilter, depositFilter]);
+
+  const pager = usePagination(active, 10);
 
   function handleMarkReturned(allocationId: string) {
     const allocation = data.allocations.find((a) => a.id === allocationId);
@@ -210,11 +213,11 @@ export default function ActiveLoansPage() {
                 <th>Deposit</th>
                 <th>Issued</th>
                 <th>Expected return</th>
-                <th />
+                <th className="col-actions">Actions</th>
               </tr>
             </thead>
             <tbody>
-              {active.map((a) => {
+              {pager.pageItems.map((a) => {
                 const t = typeById(data, a.typeId);
                 const found = unitById(data, a.unitId);
                 const group = allocationsInGroup(data, a);
@@ -252,25 +255,31 @@ export default function ActiveLoansPage() {
                     </td>
                     <td>{fmtDate(a.issueDate)}</td>
                     <td>{a.expectedReturn ? fmtDate(a.expectedReturn) : '—'}</td>
-                    <td>
+                    <td className="col-actions">
                       <div className="row-actions">
-                        <button type="button" className="btn small" onClick={() => handleMarkReturned(a.id)}>
-                          Mark returned
-                        </button>
+                        <IconButton
+                          icon={<Undo2 />}
+                          label="Mark returned"
+                          variant="primary"
+                          onClick={() => handleMarkReturned(a.id)}
+                        />
                         {a.depositGiven && (
                           <>
-                            <button type="button" className="btn small secondary" onClick={() => handleViewReceipt(a.id)}>
-                              View
-                            </button>
-                            <WhatsAppShareButton phone={a.patientPhone} onShare={() => handleSendReceipt(a.id)} />
+                            <IconButton icon={<Eye />} label="View receipt" onClick={() => handleViewReceipt(a.id)} />
+                            <WhatsAppShareButton
+                              iconOnly
+                              phone={a.patientPhone}
+                              onShare={() => handleSendReceipt(a.id)}
+                            />
                           </>
                         )}
-                        <Link to={`/equipment-register/edit/${a.id}`} className="btn small secondary">
-                          Edit
-                        </Link>
-                        <button type="button" className="btn small danger" onClick={() => handleDelete(a.id)}>
-                          Delete
-                        </button>
+                        <IconLink icon={<Pencil />} label="Edit record" to={`/equipment-register/edit/${a.id}`} />
+                        <IconButton
+                          icon={<Trash2 />}
+                          label="Delete record"
+                          variant="danger"
+                          onClick={() => handleDelete(a.id)}
+                        />
                       </div>
                     </td>
                   </tr>
@@ -278,6 +287,17 @@ export default function ActiveLoansPage() {
               })}
             </tbody>
           </table>
+          <Pagination
+            page={pager.page}
+            totalPages={pager.totalPages}
+            total={pager.total}
+            from={pager.from}
+            to={pager.to}
+            pageSize={pager.pageSize}
+            onPageChange={pager.setPage}
+            onPageSizeChange={pager.setPageSize}
+            label="loans"
+          />
         </div>
       )}
 

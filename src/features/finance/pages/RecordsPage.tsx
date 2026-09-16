@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { useFinanceData } from '../store';
 import type { FinanceKind } from '../types';
 import { categoryDisplay, donationReceiptNumber, expenseReceiptNumber } from '../helpers';
@@ -7,8 +6,10 @@ import { fmtDate } from '@/features/equipment-register/helpers';
 import { useToast } from '@/shared/components/ui/Toast';
 import PdfPreviewModal from '@/shared/components/PdfPreviewModal';
 import WhatsAppShareButton from '@/shared/components/WhatsAppShareButton';
+import Pagination, { usePagination } from '@/shared/components/Pagination';
+import { IconButton, IconLink } from '@/shared/components/RowActions';
 import { logActivity } from '@/shared/lib/activityLog';
-import { Receipt } from 'lucide-react';
+import { Receipt, Eye, Pencil, Trash2 } from 'lucide-react';
 
 export default function RecordsPage() {
   const [data, update] = useFinanceData();
@@ -31,6 +32,8 @@ export default function RecordsPage() {
         return true;
       });
   }, [data.entries, query, kindFilter]);
+
+  const pager = usePagination(rows, 10);
 
   function handleDelete(id: string) {
     if (!confirm('Delete this entry? This cannot be undone.')) return;
@@ -162,7 +165,7 @@ export default function RecordsPage() {
               <th>Party</th>
               <th>Amount</th>
               <th>Notes</th>
-              <th />
+              <th className="col-actions">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -173,7 +176,7 @@ export default function RecordsPage() {
                 </td>
               </tr>
             ) : (
-              rows.map((e) => (
+              pager.pageItems.map((e) => (
                 <tr key={e.id}>
                   <td>{fmtDate(e.date)}</td>
                   <td>
@@ -188,29 +191,26 @@ export default function RecordsPage() {
                   </td>
                   <td className="mono">₹{e.amount.toLocaleString('en-IN')}</td>
                   <td style={{ maxWidth: 220, color: 'var(--slate)', fontSize: 12 }}>{e.notes || '—'}</td>
-                  <td>
+                  <td className="col-actions">
                     <div className="row-actions">
                       {e.kind === 'donation' ? (
                         <>
-                          <button type="button" className="btn small secondary" onClick={() => handleViewReceipt(e.id)}>
-                            View
-                          </button>
-                          <WhatsAppShareButton phone={e.partyPhone} onShare={() => handleSendReceipt(e.id)} />
+                          <IconButton icon={<Eye />} label="View receipt" onClick={() => handleViewReceipt(e.id)} />
+                          <WhatsAppShareButton iconOnly phone={e.partyPhone} onShare={() => handleSendReceipt(e.id)} />
                         </>
                       ) : (
                         <>
-                          <button type="button" className="btn small secondary" onClick={() => handleViewExpenseReceipt(e.id)}>
-                            View
-                          </button>
-                          <WhatsAppShareButton phone={e.partyPhone} onShare={() => handleSendExpenseReceipt(e.id)} />
+                          <IconButton icon={<Eye />} label="View receipt" onClick={() => handleViewExpenseReceipt(e.id)} />
+                          <WhatsAppShareButton iconOnly phone={e.partyPhone} onShare={() => handleSendExpenseReceipt(e.id)} />
                         </>
                       )}
-                      <Link to={`/finance/edit/${e.id}`} className="btn small secondary">
-                        Edit
-                      </Link>
-                      <button type="button" className="btn small danger" onClick={() => handleDelete(e.id)}>
-                        Delete
-                      </button>
+                      <IconLink icon={<Pencil />} label="Edit entry" to={`/finance/edit/${e.id}`} />
+                      <IconButton
+                        icon={<Trash2 />}
+                        label="Delete entry"
+                        variant="danger"
+                        onClick={() => handleDelete(e.id)}
+                      />
                     </div>
                   </td>
                 </tr>
@@ -218,6 +218,17 @@ export default function RecordsPage() {
             )}
           </tbody>
         </table>
+        <Pagination
+          page={pager.page}
+          totalPages={pager.totalPages}
+          total={pager.total}
+          from={pager.from}
+          to={pager.to}
+          pageSize={pager.pageSize}
+          onPageChange={pager.setPage}
+          onPageSizeChange={pager.setPageSize}
+          label="entries"
+        />
       </div>
 
       {preview && <PdfPreviewModal url={preview.url} title={preview.title} onClose={closePreview} />}

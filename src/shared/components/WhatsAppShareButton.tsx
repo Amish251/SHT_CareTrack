@@ -17,6 +17,11 @@ interface WhatsAppShareButtonProps {
   onShare: () => Promise<void> | void;
   label?: string;
   className?: string;
+  /**
+   * Renders as a compact square icon button (no text), for use inside table
+   * row action columns. The tooltip/aria-label still carry the meaning.
+   */
+  iconOnly?: boolean;
 }
 
 /**
@@ -29,7 +34,8 @@ export default function WhatsAppShareButton({
   phone,
   onShare,
   label = 'Share on WhatsApp',
-  className = ''
+  className = '',
+  iconOnly = false
 }: WhatsAppShareButtonProps) {
   const [busy, setBusy] = useState(false);
   const hasPhone = !!(phone && phone.replace(/\D/g, '').length >= 8);
@@ -44,13 +50,34 @@ export default function WhatsAppShareButton({
     }
   }
 
+  const title = hasPhone
+    ? busy
+      ? 'Preparing receipt…'
+      : 'Share this receipt on WhatsApp'
+    : 'No phone number on this record';
+
+  if (iconOnly) {
+    return (
+      <button
+        type="button"
+        className={`icon-btn whatsapp ${className}`.trim()}
+        onClick={handleClick}
+        disabled={!hasPhone || busy}
+        title={title}
+        aria-label={title}
+      >
+        <WhatsAppIcon />
+      </button>
+    );
+  }
+
   return (
     <button
       type="button"
       className={`btn small whatsapp ${className}`.trim()}
       onClick={handleClick}
       disabled={!hasPhone || busy}
-      title={hasPhone ? 'Share this receipt on WhatsApp' : 'No phone number on this record'}
+      title={title}
     >
       <WhatsAppIcon />
       {busy ? 'Preparing…' : label}

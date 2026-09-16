@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { useFinanceData } from '../store';
 import { categoryDisplay } from '../helpers';
 import { fmtDate } from '@/features/equipment-register/helpers';
-import { PiggyBank } from 'lucide-react';
+import { PiggyBank, ArrowRight } from 'lucide-react';
 
 export default function OverviewPage() {
   const [data] = useFinanceData();
@@ -54,7 +54,12 @@ export default function OverviewPage() {
         </div>
       </div>
 
-      <h3 style={{ fontSize: 15, marginBottom: 12 }}>Recent entries</h3>
+      <div className="section-head">
+        <h3>Recent entries</h3>
+        <Link to="/finance/records" className="btn small secondary">
+          View all <ArrowRight />
+        </Link>
+      </div>
       {recent.length === 0 ? (
         <div className="empty">
           <div className="display">No entries yet</div>

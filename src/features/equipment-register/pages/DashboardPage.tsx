@@ -8,7 +8,8 @@ import { useToast } from '@/shared/components/ui/Toast';
 import { logActivity } from '@/shared/lib/activityLog';
 import ImportExportBar, { type ImportResult } from '@/shared/components/ImportExportBar';
 import { pickField } from '@/shared/lib/tableExport';
-import { LayoutDashboard } from 'lucide-react';
+import Pagination, { usePagination } from '@/shared/components/Pagination';
+import { Boxes } from 'lucide-react';
 
 export default function DashboardPage() {
   const [data, update] = useEquipmentData();
@@ -38,6 +39,8 @@ export default function DashboardPage() {
   const totalDonations = financeData.entries.filter((e) => e.kind === 'donation').reduce((s, e) => s + e.amount, 0);
   const totalExpenses = financeData.entries.filter((e) => e.kind === 'expense').reduce((s, e) => s + e.amount, 0);
   const donationBalance = totalDonations - totalExpenses;
+
+  const typePager = usePagination(data.types, 10);
 
   function handleAddType(e: FormEvent) {
     e.preventDefault();
@@ -192,11 +195,14 @@ export default function DashboardPage() {
       <div className="page-head">
         <div className="page-head-icon-row">
           <div className="icon-badge">
-            <LayoutDashboard />
+            <Boxes />
           </div>
           <div>
-          <h2>Dashboard</h2>
-          <p className="sub">Live snapshot of every equipment type in the store room.</p>
+          <h2>Equipment &amp; Stock</h2>
+          <p className="sub">
+            Stock levels, deposit and donation totals, and the full equipment catalogue — add, edit or
+            retire equipment types here.
+          </p>
         </div>
       </div>
       </div>
@@ -339,7 +345,7 @@ export default function DashboardPage() {
           <p>Add your first equipment type above — like a wheelchair or foldable bed.</p>
         </div>
       ) : (
-        data.types.map((t) => {
+        typePager.pageItems.map((t) => {
           const free = freeUnits(t).length;
           const engaged = engagedUnits(t).length;
           const isEditing = editingTypeId === t.id;
@@ -437,6 +443,20 @@ export default function DashboardPage() {
             </div>
           );
         })
+      )}
+
+      {data.types.length > 0 && (
+        <Pagination
+          page={typePager.page}
+          totalPages={typePager.totalPages}
+          total={typePager.total}
+          from={typePager.from}
+          to={typePager.to}
+          pageSize={typePager.pageSize}
+          onPageChange={typePager.setPage}
+          onPageSizeChange={typePager.setPageSize}
+          label="equipment types"
+        />
       )}
     </div>
   );

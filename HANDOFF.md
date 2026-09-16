@@ -1357,3 +1357,71 @@ If that shows up in practice, the cheapest fix is dropping the blur on
 `tbody td` / `thead th` only (keep the `.table-wrap` pane) — that
 removes most of the per-row compositing cost while keeping the frosted
 look of the table as a whole.
+
+### This session — pagination, icon actions, renamed dashboard, sign-out polish
+
+Five UI refinements on top of the glassmorphism theme. No data-layer or
+Supabase changes; deploy is code-only.
+
+**1. "Dashboard" renamed to "Equipment & Stock."** The page mixes three
+jobs (stock stats, the add-equipment form, and the equipment catalogue),
+and "Dashboard" implied an overview-only screen. Renamed in both the
+page header and the sidebar nav. The route is still
+`/equipment-register` — deliberately unchanged, so existing bookmarks
+and the `HomeRedirect` in `App.tsx` keep working. When these get split
+into separate pages later, the route is the thing to revisit.
+
+**2. Pagination on every listing.** New `shared/components/Pagination.tsx`
+exports a `usePagination(items, initialPageSize)` hook plus a matching
+glass-styled control bar (page-size select of 10/20/50/100, a count
+line, and numbered pages with `…` gaps once past 7 pages). Wired into:
+Equipment & Stock (type catalogue), Active Loans, Full History,
+Donation → All Records, and both Ambaji/SEOC account records.
+
+Two deliberate details in the hook: it takes the *already-filtered*
+array, so searching re-paginates against the new result set rather than
+paging through stale rows; and it resets to page 1 whenever the total
+count changes, which prevents the "filtered 200 rows down to 5 while
+sitting on page 7, now staring at an empty table" trap.
+
+**3. Icon-only row actions.** The old text buttons ("Mark returned",
+"View", "Share on WhatsApp", "Edit", "Delete") made rows very wide. New
+`shared/components/RowActions.tsx` exports `IconButton` / `IconLink`
+rendering 32px square glass buttons; `WhatsAppShareButton` gained an
+`iconOnly` prop rather than being duplicated. Mapping: eye = view
+receipt, pencil = edit, WhatsApp glyph = share, bin = delete, undo
+arrow = mark returned. Every action column header now reads "Actions".
+
+Accessibility note, since icons with no text are meaningless without
+it: every button carries both `title` (mouse hover) and `aria-label`
+(screen readers). The disabled-WhatsApp case keeps its explanatory
+tooltip ("No phone number on this record"). There's also a
+`.col-actions` rule keeping that column from wrapping icons onto a
+second line, and a mobile override pinning `.icon-btn` to a square —
+without it the global `.btn { width: 100% }` mobile rule would stretch
+them across the row.
+
+**4. "View all" on recent-entry sections.** Donation Overview, Token
+Overview, and both account Overviews previously showed a truncated
+recent list with no route onward. Each now has a `.section-head` row
+with a "View all →" button through to its full paginated listing.
+
+**5. Sign-out block rebuilt.** Was a bare text line with a small button
+butted against it. Now a proper identity block: initials avatar,
+"Signed in as" label above the username (long usernames ellipsis rather
+than overflow), and a full-width Sign out button with a `LogOut` icon,
+separated by real spacing and turning red on hover.
+
+**Verification.** `npm run build` clean, no type errors. Visually
+checked via the same static harness approach as the glassmorphism pass
+(desktop 1440px + mobile 390px), which caught one real bug: the
+`sidebar-user-meta` spans rendered inline, printing "SIGNED IN ASadmin"
+on one line — fixed with an explicit `display: flex; flex-direction:
+column`. Re-screenshotted to confirm. As before, the harness is
+reproduction markup, not the running app (inner pages need a live
+Supabase session) — so a click-through after deploy is still worth it,
+particularly paging through a listing with more than 10 rows.
+
+**Not changed:** all page routes, every handler, the receipt/PDF code,
+Supabase schema, RLS, Edge Function. `git diff --stat` should show only
+the 10 touched `.tsx`/`.css` files plus the 2 new components.

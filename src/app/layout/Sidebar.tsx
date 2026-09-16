@@ -1,5 +1,6 @@
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '@/shared/components/AuthGate';
+import { LogOut } from 'lucide-react';
 
 interface NavChild {
   to: string;
@@ -29,7 +30,7 @@ const NAV_ITEMS: NavItem[] = [
     label: 'Equipment Register',
     tag: 'ER',
     children: [
-      { to: '/equipment-register', label: 'Dashboard', tag: '01', end: true, adminOnly: true },
+      { to: '/equipment-register', label: 'Equipment & Stock', tag: '01', end: true, adminOnly: true },
       { to: '/equipment-register/issue', label: 'Issue Equipment', tag: '02' },
       { to: '/equipment-register/active', label: 'Active Loans', tag: '03' },
       { to: '/equipment-register/history', label: 'Full History', tag: '04' },
@@ -145,9 +146,20 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
         })}
       </nav>
       <div className="sidebar-foot">
-        <div>
-          Signed in as <strong>{session.username}</strong>
+        <div className="sidebar-user">
+          <div className="sidebar-user-name">
+            <span className="sidebar-user-avatar" aria-hidden="true">
+              {session.username.slice(0, 2)}
+            </span>
+            <span className="sidebar-user-meta">
+              <span className="sidebar-user-label">Signed in as</span>
+              <span className="sidebar-user-value" title={session.username}>
+                {session.username}
+              </span>
+            </span>
+          </div>
           <button type="button" className="logout-link" onClick={logout}>
+            <LogOut />
             Sign out
           </button>
         </div>

@@ -3,7 +3,7 @@ import { useAccountData } from '../store';
 import type { AccountConfig } from '../config';
 import { categoryDisplay } from '../helpers';
 import { fmtDate } from '@/features/equipment-register/helpers';
-import { PiggyBank } from 'lucide-react';
+import { PiggyBank, ArrowRight } from 'lucide-react';
 
 export default function AccountOverview({ config }: { config: AccountConfig }) {
   const [data] = useAccountData(config.namespace);
@@ -55,7 +55,12 @@ export default function AccountOverview({ config }: { config: AccountConfig }) {
         </div>
       </div>
 
-      <h3 style={{ fontSize: 15, marginBottom: 12 }}>Recent entries</h3>
+      <div className="section-head">
+        <h3>Recent entries</h3>
+        <Link to={`/${config.slug}/records`} className="btn small secondary">
+          View all <ArrowRight />
+        </Link>
+      </div>
       {recent.length === 0 ? (
         <div className="empty">
           <div className="display">No entries yet</div>
