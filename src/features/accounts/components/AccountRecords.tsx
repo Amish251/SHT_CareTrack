@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { useAccountData } from '../store';
 import {
   ACCOUNT_PAYMENT_MODES,
@@ -193,41 +192,37 @@ export default function AccountRecords({ config }: { config: AccountConfig }) {
             <Receipt />
           </div>
           <div>
-          <h2>{config.title} — All Records</h2>
-          <p className="sub">Every credit and debit entry recorded for {config.title}.</p>
+            <h2>{config.title} — All Records</h2>
+            <p className="sub">Every credit and debit entry recorded for {config.title}.</p>
+          </div>
         </div>
-      </div>
-        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-start' }}>
-          <Link to={`/${config.slug}/add`} className="btn small">
-            + Add entry
-          </Link>
-          <ImportExportBar
-            entityLabel={`${config.title} entries`}
-            sampleFilename={`${config.slug}-sample.xlsx`}
-            sampleHeaders={['Kind', 'Purpose', 'Amount', 'PartyName', 'PartyPhone', 'Date', 'PaymentMode', 'HandledBy', 'Notes']}
-            sampleRows={[
-              ['credit', 'Diwali donation', 1000, 'Rajesh Shah', '9898989898', '2026-09-01', 'UPI', 'Amish Patel', ''],
-              ['debit', 'Printing pamphlets', 350, 'Local Press', '', '2026-09-02', 'Cash', 'Amish Patel', 'Event material']
-            ]}
-            onImportRows={handleImportEntries}
-            exportFilenameBase={`${config.slug}-entries`}
-            exportTitle={`${config.title} — Credit & Debit`}
-            exportHeaders={['Date', 'Type', 'Purpose', 'Party', 'Phone', 'Amount (₹)', 'Payment Mode', 'Handled By', 'Notes']}
-            getExportRows={() =>
-              data.entries.map((e) => [
-                e.date,
-                e.kind === 'credit' ? 'Credit' : 'Debit',
-                categoryDisplay(e),
-                e.partyName || '—',
-                e.partyPhone || '—',
-                e.amount,
-                e.paymentMode || '—',
-                e.handledBy || '—',
-                e.notes || '—'
-              ])
-            }
-          />
-        </div>
+        <ImportExportBar
+          addAction={{ label: '+ Add entry', to: `/${config.slug}/add` }}
+          entityLabel={`${config.title} entries`}
+          sampleFilename={`${config.slug}-sample.xlsx`}
+          sampleHeaders={['Kind', 'Purpose', 'Amount', 'PartyName', 'PartyPhone', 'Date', 'PaymentMode', 'HandledBy', 'Notes']}
+          sampleRows={[
+            ['credit', 'Diwali donation', 1000, 'Rajesh Shah', '9898989898', '2026-09-01', 'UPI', 'Amish Patel', ''],
+            ['debit', 'Printing pamphlets', 350, 'Local Press', '', '2026-09-02', 'Cash', 'Amish Patel', 'Event material']
+          ]}
+          onImportRows={handleImportEntries}
+          exportFilenameBase={`${config.slug}-entries`}
+          exportTitle={`${config.title} — Credit & Debit`}
+          exportHeaders={['Date', 'Type', 'Purpose', 'Party', 'Phone', 'Amount (₹)', 'Payment Mode', 'Handled By', 'Notes']}
+          getExportRows={() =>
+            data.entries.map((e) => [
+              e.date,
+              e.kind === 'credit' ? 'Credit' : 'Debit',
+              categoryDisplay(e),
+              e.partyName || '—',
+              e.partyPhone || '—',
+              e.amount,
+              e.paymentMode || '—',
+              e.handledBy || '—',
+              e.notes || '—'
+            ])
+          }
+        />
       </div>
 
       <div className="toolbar">

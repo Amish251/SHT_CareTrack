@@ -5,6 +5,7 @@ import { uid } from '@/shared/lib/storage';
 import { useToast } from '@/shared/components/ui/Toast';
 import { logActivity } from '@/shared/lib/activityLog';
 import { PackagePlus } from 'lucide-react';
+import BackLink from '@/shared/components/BackLink';
 
 export default function AddEquipmentTypePage() {
   const [, update] = useEquipmentData();
@@ -60,6 +61,7 @@ export default function AddEquipmentTypePage() {
             <p className="sub">Add a new kind of equipment and how many units of it the Trust has.</p>
           </div>
         </div>
+        <BackLink to="/equipment-register/types" label="Back to Equipment Type" />
       </div>
 
       <div className="panel">

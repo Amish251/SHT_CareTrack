@@ -9,6 +9,7 @@ import { useAuth } from '@/shared/components/AuthGate';
 import { todayStr } from '@/features/equipment-register/helpers';
 import { logActivity } from '@/shared/lib/activityLog';
 import { HandCoins, IndianRupee, UserRound, Phone, CalendarDays } from 'lucide-react';
+import BackLink from '@/shared/components/BackLink';
 
 export default function AccountAddEntry({ config }: { config: AccountConfig }) {
   const [data, update] = useAccountData(config.namespace);
@@ -83,10 +84,11 @@ export default function AccountAddEntry({ config }: { config: AccountConfig }) {
             <HandCoins />
           </div>
           <div>
-          <h2>Add Entry — {config.title}</h2>
-          <p className="sub">Record a credit (income) or debit (expense) for {config.title}.</p>
+            <h2>Add Entry — {config.title}</h2>
+            <p className="sub">Record a credit (income) or debit (expense) for {config.title}.</p>
+          </div>
         </div>
-      </div>
+        <BackLink to={`/${config.slug}/records`} label="Back to Records" />
       </div>
 
       <div className="panel">

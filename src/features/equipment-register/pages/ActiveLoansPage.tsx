@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { useEquipmentData } from '../store';
 import { allocationsInGroup, fmtDate, todayStr, typeById, unitById } from '../helpers';
 import { uid } from '@/shared/lib/storage';
@@ -235,56 +234,52 @@ export default function ActiveLoansPage() {
             <PackagePlus />
           </div>
           <div>
-          <h2>Issue Equipment</h2>
-          <p className="sub">Equipment currently out with patients. Tap the deposit status to update it.</p>
+            <h2>Issue Equipment</h2>
+            <p className="sub">Equipment currently out with patients. Tap the deposit status to update it.</p>
+          </div>
         </div>
-      </div>
-        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-start' }}>
-          <Link to="/equipment-register/issue" className="btn small">
-            + Issue equipment
-          </Link>
-          <ImportExportBar
-            entityLabel="issue records"
-            sampleFilename="issue-equipment-sample.xlsx"
-            sampleHeaders={[
-              'PatientName',
-              'Phone',
-              'EquipmentType',
-              'TokenAmount',
-              'IssueDate',
-              'ExpectedReturn',
-              'DepositGiven',
-              'ReceivedBy',
-              'Notes'
-            ]}
-            sampleRows={[
-              ['Ramesh Patel', '9876543210', 'Wheelchair', 500, '2026-09-01', '2026-10-01', 'Yes', 'Amish Patel', 'Left leg injury'],
-              ['Sita Devi', '9123456780', 'Walking Stick', 100, '2026-09-02', '', 'No', '', '']
-            ]}
-            onImportRows={handleImportIssues}
-            exportFilenameBase="active-equipment-issues"
-            exportTitle="Active Equipment Issues"
-            exportHeaders={['Patient', 'Phone', 'Equipment', 'Unit', 'Token (₹)', 'Deposit', 'Issued', 'Expected Return']}
-            getExportRows={() =>
-              data.allocations
-                .filter((a) => a.status === 'active')
-                .map((a) => {
-                  const t = typeById(data, a.typeId);
-                  const u = unitById(data, a.unitId);
-                  return [
-                    a.patientName,
-                    a.patientPhone,
-                    t ? t.name : '—',
-                    u ? u.unit.label : '—',
-                    a.tokenAmount,
-                    a.depositGiven ? 'Received' : 'Pending',
-                    fmtDate(a.issueDate),
-                    a.expectedReturn ? fmtDate(a.expectedReturn) : '—'
-                  ];
-                })
-            }
-          />
-        </div>
+        <ImportExportBar
+          addAction={{ label: '+ Issue equipment', to: '/equipment-register/issue' }}
+          entityLabel="issue records"
+          sampleFilename="issue-equipment-sample.xlsx"
+          sampleHeaders={[
+            'PatientName',
+            'Phone',
+            'EquipmentType',
+            'TokenAmount',
+            'IssueDate',
+            'ExpectedReturn',
+            'DepositGiven',
+            'ReceivedBy',
+            'Notes'
+          ]}
+          sampleRows={[
+            ['Ramesh Patel', '9876543210', 'Wheelchair', 500, '2026-09-01', '2026-10-01', 'Yes', 'Amish Patel', 'Left leg injury'],
+            ['Sita Devi', '9123456780', 'Walking Stick', 100, '2026-09-02', '', 'No', '', '']
+          ]}
+          onImportRows={handleImportIssues}
+          exportFilenameBase="active-equipment-issues"
+          exportTitle="Active Equipment Issues"
+          exportHeaders={['Patient', 'Phone', 'Equipment', 'Unit', 'Token (₹)', 'Deposit', 'Issued', 'Expected Return']}
+          getExportRows={() =>
+            data.allocations
+              .filter((a) => a.status === 'active')
+              .map((a) => {
+                const t = typeById(data, a.typeId);
+                const u = unitById(data, a.unitId);
+                return [
+                  a.patientName,
+                  a.patientPhone,
+                  t ? t.name : '—',
+                  u ? u.unit.label : '—',
+                  a.tokenAmount,
+                  a.depositGiven ? 'Received' : 'Pending',
+                  fmtDate(a.issueDate),
+                  a.expectedReturn ? fmtDate(a.expectedReturn) : '—'
+                ];
+              })
+          }
+        />
       </div>
 
       <div className="toolbar">

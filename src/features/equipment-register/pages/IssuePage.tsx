@@ -7,6 +7,7 @@ import { useToast } from '@/shared/components/ui/Toast';
 import { useAuth } from '@/shared/components/AuthGate';
 import { logActivity } from '@/shared/lib/activityLog';
 import { PackagePlus, UserRound, Phone, CalendarDays, IndianRupee } from 'lucide-react';
+import BackLink from '@/shared/components/BackLink';
 
 interface LineItem {
   key: string;
@@ -189,10 +190,11 @@ export default function IssuePage() {
             <PackagePlus />
           </div>
           <div>
-          <h2>Issue Equipment</h2>
-          <p className="sub">Give one or more equipment units to a patient against a refundable security deposit.</p>
+            <h2>Issue Equipment</h2>
+            <p className="sub">Give one or more equipment units to a patient against a refundable security deposit.</p>
+          </div>
         </div>
-      </div>
+        <BackLink to="/equipment-register/active" label="Back to Issue Equipment" />
       </div>
 
       {data.types.length === 0 ? (

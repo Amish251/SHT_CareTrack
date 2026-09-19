@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { FileSpreadsheet, FileText, Download, Upload, X, CheckCircle2 } from 'lucide-react';
 import { downloadSampleExcel, exportRowsToExcel, exportRowsToPdf, parseExcelFile } from '@/shared/lib/tableExport';
 import { useToast } from '@/shared/components/ui/Toast';
@@ -21,6 +22,10 @@ interface ImportExportBarProps {
   exportTitle: string;
   exportHeaders: string[];
   getExportRows: () => (string | number)[][];
+  /** Optional primary "+ Add X" action rendered as part of the same toolbar,
+   *  so it and Import/Export read as one coherent group instead of two
+   *  separate controls sitting next to each other. */
+  addAction?: { label: string; to: string };
 }
 
 export default function ImportExportBar({
@@ -32,7 +37,8 @@ export default function ImportExportBar({
   exportFilenameBase,
   exportTitle,
   exportHeaders,
-  getExportRows
+  getExportRows,
+  addAction
 }: ImportExportBarProps) {
   const { showToast } = useToast();
   const [open, setOpen] = useState(false);
@@ -107,25 +113,35 @@ export default function ImportExportBar({
 
   return (
     <div style={{ marginBottom: 18 }}>
-      <div className="ie-tabs">
-        <button type="button" className={`ie-tab ${open ? 'active' : ''}`} onClick={() => setOpen((o) => !o)}>
-          <span className="ie-tab-icon excel">
-            <FileSpreadsheet />
-          </span>
-          Import Excel
-        </button>
-        <button type="button" className="ie-tab" onClick={handleExportExcel}>
-          <span className="ie-tab-icon excel">
-            <FileSpreadsheet />
-          </span>
-          Export Excel
-        </button>
-        <button type="button" className="ie-tab" onClick={handleExportPdf}>
-          <span className="ie-tab-icon pdf">
-            <FileText />
-          </span>
-          Export PDF
-        </button>
+      <div className="action-toolbar">
+        {addAction && (
+          <>
+            <Link to={addAction.to} className="btn small">
+              {addAction.label}
+            </Link>
+            <div className="action-toolbar-divider" />
+          </>
+        )}
+        <div className="io-group">
+          <button type="button" className={`io-btn ${open ? 'active' : ''}`} onClick={() => setOpen((o) => !o)}>
+            <span className="io-icon">
+              <Upload />
+            </span>
+            <span className="io-label">Import</span>
+          </button>
+          <button type="button" className="io-btn" onClick={handleExportExcel}>
+            <span className="io-icon excel">
+              <FileSpreadsheet />
+            </span>
+            <span className="io-label">Excel</span>
+          </button>
+          <button type="button" className="io-btn" onClick={handleExportPdf}>
+            <span className="io-icon pdf">
+              <FileText />
+            </span>
+            <span className="io-label">PDF</span>
+          </button>
+        </div>
       </div>
 
       {open && (

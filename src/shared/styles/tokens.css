@@ -367,48 +367,66 @@ h1, h2, h3, .display {
   z-index: 1;
 }
 
-/* ---------- Import / Export bar ---------- */
-.ie-tabs { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
-.ie-tab {
-  flex: 1 1 180px;
+/* ---------- Page action toolbar (primary "+ Add" + Import/Export), unified ----------
+   One glass pill holding both the primary action and the compact import/export
+   controls, so they read as one intentional cluster instead of two mismatched
+   pieces bolted together. Used identically on Equipment Type, Issue Equipment /
+   Active Loans, Donation & Expenses Register, Ambaji Account, and SEOC Account. */
+.action-toolbar {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 13px 16px;
-  border-radius: 15px;
+  gap: 4px;
+  flex-wrap: wrap;
+  background: var(--glass-bg-strong);
   border: 1px solid var(--glass-border);
-  background: var(--glass-bg);
+  border-radius: 15px;
+  padding: 5px;
+  box-shadow: var(--shadow);
   backdrop-filter: blur(var(--glass-blur-sm)) saturate(140%);
   -webkit-backdrop-filter: blur(var(--glass-blur-sm)) saturate(140%);
-  font-weight: 700;
-  font-size: 13.5px;
-  color: var(--ink);
-  cursor: pointer;
-  box-shadow: var(--shadow);
-  transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease, background .15s ease, color .15s ease;
 }
-.ie-tab:hover { background: var(--glass-bg-strong); transform: translateY(-1px); box-shadow: var(--shadow-lg); }
-.ie-tab.active {
+.action-toolbar .btn.small { margin: 0; flex-shrink: 0; }
+.action-toolbar-divider { width: 1px; align-self: stretch; background: var(--glass-border); margin: 2px 1px; flex-shrink: 0; }
+.io-group { display: flex; align-items: center; gap: 2px; flex-wrap: wrap; }
+.io-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 34px;
+  padding: 7px 12px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--ink-soft);
+  font-weight: 700;
+  font-size: 11.5px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background .15s ease, color .15s ease;
+}
+.io-btn:hover { background: rgba(255,255,255,.70); color: var(--ink); }
+.io-btn.active {
   background: linear-gradient(135deg, rgba(59,130,246,.92) 0%, rgba(29,78,216,.92) 100%);
   color: #fff;
-  border-color: rgba(255,255,255,.30);
-  box-shadow: 0 12px 28px rgba(37, 99, 235, .32), inset 0 1px 0 rgba(255,255,255,.30);
+  box-shadow: 0 6px 16px rgba(37,99,235,.28);
 }
-.ie-tab-icon {
-  width: 32px;
-  height: 32px;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  background: rgba(37, 99, 235, .14);
-  color: var(--primary-deep);
+.io-icon { display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.io-icon svg { width: 15px; height: 15px; }
+.io-icon.excel { color: #16713d; }
+.io-icon.pdf { color: #b3352a; }
+.io-btn.active .io-icon { color: #fff; }
+
+@media (max-width: 620px) {
+  .action-toolbar { width: 100%; }
+  .action-toolbar .btn.small { flex: 1 1 auto; justify-content: center; }
+  .action-toolbar-divider { display: none; }
+  .io-group { width: 100%; justify-content: space-between; }
+  .io-btn { flex: 1 1 0; justify-content: center; padding: 8px 6px; }
 }
-.ie-tab-icon svg { width: 17px; height: 17px; }
-.ie-tab-icon.excel { background: rgba(27, 122, 67, .14); color: #16713d; }
-.ie-tab-icon.pdf { background: rgba(192, 57, 43, .14); color: #b3352a; }
-.ie-tab.active .ie-tab-icon { background: rgba(255, 255, 255, .24); color: #fff; }
+@media (max-width: 400px) {
+  .io-label { display: none; }
+  .io-btn { min-width: 38px; }
+}
 
 .dropzone {
   border: 2px dashed rgba(255, 255, 255, 0.75);
@@ -943,7 +961,7 @@ tbody tr:hover td { background: rgba(255, 255, 255, 0.46); }
    motion sick or lose legibility with heavy blur, and Safari/iOS exposes this
    as a real accessibility setting. Falls back to solid surfaces. */
 @media (prefers-reduced-transparency: reduce) {
-  .page-head, .panel, .card, .ie-tab, .empty, .table-wrap, .modal-card, .check-row, .dropzone,
+  .page-head, .panel, .card, .action-toolbar, .empty, .table-wrap, .modal-card, .check-row, .dropzone,
   .pagination, .icon-btn, .page-btn {
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
@@ -960,7 +978,7 @@ tbody tr:hover td { background: rgba(255, 255, 255, 0.46); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .card:hover, .btn:hover, .ie-tab:hover, .sidebar nav a:hover,
+  .card:hover, .btn:hover, .io-btn:hover, .sidebar nav a:hover,
   .icon-btn:hover, .page-btn:hover { transform: none; }
 }
 

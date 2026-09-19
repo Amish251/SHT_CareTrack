@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { useFinanceData } from '../store';
 import { PAYMENT_MODES, type FinanceEntry, type FinanceKind, type PaymentMode } from '../types';
 import { categoryDisplay, donationReceiptNumber, expenseReceiptNumber } from '../helpers';
@@ -187,41 +186,37 @@ export default function RecordsPage() {
             <Receipt />
           </div>
           <div>
-          <h2>All Records</h2>
-          <p className="sub">Every donation and expense ever recorded.</p>
+            <h2>All Records</h2>
+            <p className="sub">Every donation and expense ever recorded.</p>
+          </div>
         </div>
-      </div>
-        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-start' }}>
-          <Link to="/finance/add" className="btn small">
-            + Add entry
-          </Link>
-          <ImportExportBar
-            entityLabel="donation/expense entries"
-            sampleFilename="donation-entries-sample.xlsx"
-            sampleHeaders={['Kind', 'Purpose', 'Amount', 'PartyName', 'PartyPhone', 'Date', 'PaymentMode', 'ReceivedBy', 'Notes']}
-            sampleRows={[
-              ['donation', 'Wheelchair sponsorship', 1000, 'Rajesh Shah', '9898989898', '2026-09-01', 'UPI', 'Amish Patel', 'Diwali donation'],
-              ['expense', 'Auto fare for equipment pickup', 350, '', '', '2026-09-02', 'Cash', 'Amish Patel', '']
-            ]}
-            onImportRows={handleImportEntries}
-            exportFilenameBase="donation-expense-entries"
-            exportTitle="Donations & Expenses"
-            exportHeaders={['Date', 'Type', 'Purpose', 'Party', 'Phone', 'Amount (₹)', 'Payment Mode', 'Received By', 'Notes']}
-            getExportRows={() =>
-              data.entries.map((e) => [
-                fmtDate(e.date),
-                e.kind === 'donation' ? 'Donation' : 'Expense',
-                categoryDisplay(e),
-                e.partyName || '—',
-                e.partyPhone || '—',
-                e.amount,
-                e.paymentMode || '—',
-                e.receivedBy || '—',
-                e.notes || '—'
-              ])
-            }
-          />
-        </div>
+        <ImportExportBar
+          addAction={{ label: '+ Add entry', to: '/finance/add' }}
+          entityLabel="donation/expense entries"
+          sampleFilename="donation-entries-sample.xlsx"
+          sampleHeaders={['Kind', 'Purpose', 'Amount', 'PartyName', 'PartyPhone', 'Date', 'PaymentMode', 'ReceivedBy', 'Notes']}
+          sampleRows={[
+            ['donation', 'Wheelchair sponsorship', 1000, 'Rajesh Shah', '9898989898', '2026-09-01', 'UPI', 'Amish Patel', 'Diwali donation'],
+            ['expense', 'Auto fare for equipment pickup', 350, '', '', '2026-09-02', 'Cash', 'Amish Patel', '']
+          ]}
+          onImportRows={handleImportEntries}
+          exportFilenameBase="donation-expense-entries"
+          exportTitle="Donations & Expenses"
+          exportHeaders={['Date', 'Type', 'Purpose', 'Party', 'Phone', 'Amount (₹)', 'Payment Mode', 'Received By', 'Notes']}
+          getExportRows={() =>
+            data.entries.map((e) => [
+              fmtDate(e.date),
+              e.kind === 'donation' ? 'Donation' : 'Expense',
+              categoryDisplay(e),
+              e.partyName || '—',
+              e.partyPhone || '—',
+              e.amount,
+              e.paymentMode || '—',
+              e.receivedBy || '—',
+              e.notes || '—'
+            ])
+          }
+        />
       </div>
 
       <div className="toolbar">

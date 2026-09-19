@@ -1,5 +1,4 @@
 import { useState, type FormEvent } from 'react';
-import { Link } from 'react-router-dom';
 import { useEquipmentData } from '../store';
 import { engagedUnits, freeUnits } from '../helpers';
 import { uid } from '@/shared/lib/storage';
@@ -154,27 +153,23 @@ export default function EquipmentTypePage() {
             <p className="sub">The full equipment catalogue — add, edit or retire equipment types here.</p>
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-start' }}>
-          <Link to="/equipment-register/types/add" className="btn small">
-            + Add equipment type
-          </Link>
-          <ImportExportBar
-            entityLabel="equipment types"
-            sampleFilename="equipment-types-sample.xlsx"
-            sampleHeaders={['Name', 'TokenAmount', 'Quantity']}
-            sampleRows={[
-              ['Wheelchair', 500, 3],
-              ['Walking Stick', 100, 5]
-            ]}
-            onImportRows={handleImportTypes}
-            exportFilenameBase="equipment-types"
-            exportTitle="Equipment Types"
-            exportHeaders={['Name', 'Token Amount (₹)', 'Total Units', 'Free', 'Engaged']}
-            getExportRows={() =>
-              data.types.map((t) => [t.name, t.tokenAmount, t.units.length, freeUnits(t).length, engagedUnits(t).length])
-            }
-          />
-        </div>
+        <ImportExportBar
+          addAction={{ label: '+ Add equipment type', to: '/equipment-register/types/add' }}
+          entityLabel="equipment types"
+          sampleFilename="equipment-types-sample.xlsx"
+          sampleHeaders={['Name', 'TokenAmount', 'Quantity']}
+          sampleRows={[
+            ['Wheelchair', 500, 3],
+            ['Walking Stick', 100, 5]
+          ]}
+          onImportRows={handleImportTypes}
+          exportFilenameBase="equipment-types"
+          exportTitle="Equipment Types"
+          exportHeaders={['Name', 'Token Amount (₹)', 'Total Units', 'Free', 'Engaged']}
+          getExportRows={() =>
+            data.types.map((t) => [t.name, t.tokenAmount, t.units.length, freeUnits(t).length, engagedUnits(t).length])
+          }
+        />
       </div>
 
       {data.types.length === 0 ? (

@@ -1484,3 +1484,83 @@ on their own pages) is worth doing after deploy.
 **Scope check**: diffed against the last delivered zip — only
 `App.tsx`, `Sidebar.tsx`, `tokens.css`, and the new `features/dashboard/`
 folder changed. No existing page, handler, or Supabase file touched.
+
+### This session — action toolbar redesign + Back buttons on Add pages
+
+Two requests, both scoped precisely to what was asked, nothing else touched.
+
+**1. Fixed the "+ Add" + Import/Export row.** Root cause found by reading
+the actual CSS rather than guessing: `.ie-tabs` was `display:flex;
+flex-wrap:wrap`, and each `.ie-tab` was `flex: 1 1 180px` — a large
+card-style button with an icon badge. The "+ Add" link sat as a sibling
+in a *separate* wrapping flex container right next to it. Two
+independently-wrapping flex groups of very different button sizes is
+exactly what produced the lopsided, multi-row mess in the screenshot.
+
+Fix: `ImportExportBar.tsx` now takes an optional `addAction?: { label,
+to }` prop and renders the Add button *inside its own toolbar*,
+separated by a thin divider, so Add + Import + Export are one visual
+unit — a single `.action-toolbar` glass pill — not two mismatched
+pieces. The old oversized `.ie-tab` cards were replaced with compact
+`.io-btn` icon+label chips (`Import` / `Excel` / `PDF`, using distinct
+Upload/FileSpreadsheet/FileText icons for quick recognition). Added
+matching responsive rules: ≤620px the toolbar goes full-width with the
+io-buttons evenly split; ≤400px labels hide and it's icon-only. No
+overflow, no uneven wrapping at any width tested.
+
+Applied to all four pages using this pattern — **Equipment Type**,
+**Issue Equipment / Active Loans**, **Donation & Expenses Register**,
+and **Ambaji/SEOC Account Records** (one shared `AccountRecords.tsx`,
+so this fixes both accounts at once). Removed the now-redundant
+sibling `<Link>` and outer wrapper `<div>` at each of the four call
+sites, and cleaned up the `Link` import that became unused in three of
+those files as a result (kept where still genuinely used, e.g.
+`IssuePage.tsx`'s empty-state link to Equipment Type).
+
+The old `.ie-tab`/`.ie-tabs`/`.ie-tab-icon` classes are fully removed,
+including the two stray references to `.ie-tab` in the
+`prefers-reduced-transparency`/`prefers-reduced-motion` accessibility
+media queries near the end of `tokens.css` — updated those to
+`.action-toolbar`/`.io-btn` respectively, so reduced-motion/
+transparency support isn't silently broken for the new class names.
+
+**2. Back buttons on every Add page.** New reusable
+`src/shared/components/BackLink.tsx` — an arrow-icon + label link,
+same `.btn.small.secondary` styling used for Cancel buttons elsewhere,
+placed as the second child of `.page-head` (mirroring exactly how the
+`ImportExportBar` sits on listing pages, so headers follow one
+consistent left-content/right-action layout rule throughout the app).
+Wired into all four Add pages with the specific destinations asked
+for:
+- Add Equipment Type → Equipment Type list
+- Issue Equipment (the form) → Issue Equipment / Active Loans list
+- Donation & Expenses Add Entry → Donation & Expenses Register
+- Ambaji/SEOC Add Entry (shared `AccountAddEntry.tsx`) → that
+  account's own Records page, via `config.slug` — so this one change
+  correctly covers both accounts without hardcoding either route.
+
+**Verification.** `npm run build` clean, `tsc -b` clean. Grepped the
+whole `src/` tree afterward for leftover `.ie-tab`/`.ie-tabs`
+references (none) and confirmed exactly four `addAction=` usages and
+four `BackLink` usages — matching the four toolbar pages and four Add
+pages this was scoped to, no more, no less. **Not visually verified in
+a real browser or against live Supabase data** — same standing
+sandbox limitation as every prior session (no headless browser
+available here). Real verification once deployed: check the toolbar
+on Equipment Type/Issue Equipment/Donation Register/Ambaji/SEOC at a
+real narrow mobile width (not just resizing a desktop browser, since
+touch-target sizing can differ), and click every Back button to
+confirm it lands where labelled.
+
+**Noticed but did not touch:** `npm run build` printed Vite's
+"chunks larger than 500 kB" warning for the first time this project's
+history — main JS chunk is now ~536 kB. This is cumulative growth from
+everything built across sessions since the ~488 kB figure noted a few
+sessions back (icons, RowActions, Pagination, activity log, profile
+settings, etc.), not something introduced by this session's changes
+(a new tiny `BackLink` component and a CSS/JSX reshuffle add
+negligible weight). Flagging rather than fixing — route-level
+code-splitting (`React.lazy` per page in `App.tsx`) is the right fix
+whenever it's prioritized, but doing that unprompted as a side effect
+of an unrelated UI task risks touching far more of the app than this
+request called for.

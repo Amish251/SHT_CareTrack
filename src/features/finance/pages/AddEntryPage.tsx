@@ -8,6 +8,7 @@ import { useAuth } from '@/shared/components/AuthGate';
 import { todayStr } from '@/features/equipment-register/helpers';
 import { logActivity } from '@/shared/lib/activityLog';
 import { HandCoins, IndianRupee, UserRound, Phone, CalendarDays } from 'lucide-react';
+import BackLink from '@/shared/components/BackLink';
 
 export default function AddEntryPage() {
   const [data, update] = useFinanceData();
@@ -86,10 +87,11 @@ export default function AddEntryPage() {
             <HandCoins />
           </div>
           <div>
-          <h2>Add Entry</h2>
-          <p className="sub">Record a donation received or an expense paid out.</p>
+            <h2>Add Entry</h2>
+            <p className="sub">Record a donation received or an expense paid out.</p>
+          </div>
         </div>
-      </div>
+        <BackLink to="/finance/records" label="Back to Register" />
       </div>
 
       <div className="panel">
