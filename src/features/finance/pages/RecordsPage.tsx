@@ -1,11 +1,15 @@
 import { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useFinanceData } from '../store';
-import type { FinanceKind } from '../types';
+import { PAYMENT_MODES, type FinanceEntry, type FinanceKind, type PaymentMode } from '../types';
 import { categoryDisplay, donationReceiptNumber, expenseReceiptNumber } from '../helpers';
-import { fmtDate } from '@/features/equipment-register/helpers';
+import { fmtDate, todayStr } from '@/features/equipment-register/helpers';
+import { uid } from '@/shared/lib/storage';
 import { useToast } from '@/shared/components/ui/Toast';
 import PdfPreviewModal from '@/shared/components/PdfPreviewModal';
 import WhatsAppShareButton from '@/shared/components/WhatsAppShareButton';
+import ImportExportBar, { type ImportResult } from '@/shared/components/ImportExportBar';
+import { pickField } from '@/shared/lib/tableExport';
 import Pagination, { usePagination } from '@/shared/components/Pagination';
 import { IconButton, IconLink } from '@/shared/components/RowActions';
 import { logActivity } from '@/shared/lib/activityLog';
@@ -127,6 +131,54 @@ export default function RecordsPage() {
     }
   }
 
+  function handleImportEntries(rows: Record<string, string>[]): ImportResult {
+    let success = 0;
+    let failed = 0;
+
+    update((prev) => {
+      const newEntries: FinanceEntry[] = [];
+      rows.forEach((row) => {
+        const kindRaw = pickField(row, 'Kind', 'Type').trim().toLowerCase();
+        const rowKind: FinanceKind = kindRaw === 'expense' ? 'expense' : 'donation';
+        const rowCategory =
+          pickField(row, 'Category', 'Purpose').trim() || (rowKind === 'donation' ? 'General Donation' : 'Other');
+        const amt = parseFloat(pickField(row, 'Amount'));
+        const rowPartyName = pickField(row, 'PartyName', 'Party Name', 'DonorName', 'Donor', 'PaidTo').trim();
+        const rowPartyPhone = pickField(row, 'PartyPhone', 'Party Phone', 'Phone', 'Contact').trim();
+        const rowDate = pickField(row, 'Date').trim() || todayStr();
+        const paymentModeRaw = pickField(row, 'PaymentMode', 'Payment Mode').trim();
+        const rowPaymentMode: PaymentMode = (PAYMENT_MODES as readonly string[]).includes(paymentModeRaw)
+          ? (paymentModeRaw as PaymentMode)
+          : 'Cash';
+        const rowReceivedBy = pickField(row, 'ReceivedBy', 'Received By').trim();
+        const rowNotes = pickField(row, 'Notes').trim();
+
+        if (Number.isNaN(amt) || amt <= 0) {
+          failed++;
+          return;
+        }
+
+        newEntries.push({
+          id: uid('fin'),
+          kind: rowKind,
+          category: rowCategory,
+          amount: amt,
+          partyName: rowPartyName,
+          partyPhone: rowPartyPhone,
+          date: rowDate,
+          paymentMode: rowPaymentMode,
+          receivedBy: rowReceivedBy,
+          notes: rowNotes
+        });
+        success++;
+      });
+      return { entries: [...prev.entries, ...newEntries] };
+    });
+
+    if (success > 0) logActivity('Import finance entries', `Imported ${success} entrie(s) from Excel`);
+    return { success, failed };
+  }
+
   return (
     <div>
       <div className="page-head">
@@ -139,6 +191,37 @@ export default function RecordsPage() {
           <p className="sub">Every donation and expense ever recorded.</p>
         </div>
       </div>
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+          <Link to="/finance/add" className="btn small">
+            + Add entry
+          </Link>
+          <ImportExportBar
+            entityLabel="donation/expense entries"
+            sampleFilename="donation-entries-sample.xlsx"
+            sampleHeaders={['Kind', 'Purpose', 'Amount', 'PartyName', 'PartyPhone', 'Date', 'PaymentMode', 'ReceivedBy', 'Notes']}
+            sampleRows={[
+              ['donation', 'Wheelchair sponsorship', 1000, 'Rajesh Shah', '9898989898', '2026-09-01', 'UPI', 'Amish Patel', 'Diwali donation'],
+              ['expense', 'Auto fare for equipment pickup', 350, '', '', '2026-09-02', 'Cash', 'Amish Patel', '']
+            ]}
+            onImportRows={handleImportEntries}
+            exportFilenameBase="donation-expense-entries"
+            exportTitle="Donations & Expenses"
+            exportHeaders={['Date', 'Type', 'Purpose', 'Party', 'Phone', 'Amount (₹)', 'Payment Mode', 'Received By', 'Notes']}
+            getExportRows={() =>
+              data.entries.map((e) => [
+                fmtDate(e.date),
+                e.kind === 'donation' ? 'Donation' : 'Expense',
+                categoryDisplay(e),
+                e.partyName || '—',
+                e.partyPhone || '—',
+                e.amount,
+                e.paymentMode || '—',
+                e.receivedBy || '—',
+                e.notes || '—'
+              ])
+            }
+          />
+        </div>
       </div>
 
       <div className="toolbar">
@@ -161,7 +244,7 @@ export default function RecordsPage() {
             <tr>
               <th>Date</th>
               <th>Type</th>
-              <th>Category</th>
+              <th>Purpose</th>
               <th>Party</th>
               <th>Amount</th>
               <th>Notes</th>

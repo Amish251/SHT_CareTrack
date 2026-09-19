@@ -29,9 +29,6 @@ export default function AccountOverview({ config }: { config: AccountConfig }) {
           <p className="sub">Credit and debit entries for {config.title}.</p>
         </div>
       </div>
-        <Link to={`/${config.slug}/add`} className="btn small">
-          + Add entry
-        </Link>
       </div>
 
       <div className="grid" style={{ marginBottom: 28 }}>
@@ -73,7 +70,7 @@ export default function AccountOverview({ config }: { config: AccountConfig }) {
               <tr>
                 <th>Date</th>
                 <th>Type</th>
-                <th>Category</th>
+                <th>Purpose</th>
                 <th>Party</th>
                 <th>Amount</th>
               </tr>

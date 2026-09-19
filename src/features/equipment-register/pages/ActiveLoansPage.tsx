@@ -1,14 +1,18 @@
 import { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useEquipmentData } from '../store';
 import { allocationsInGroup, fmtDate, todayStr, typeById, unitById } from '../helpers';
+import { uid } from '@/shared/lib/storage';
 import { useToast } from '@/shared/components/ui/Toast';
 import { useAuth } from '@/shared/components/AuthGate';
 import PdfPreviewModal from '@/shared/components/PdfPreviewModal';
 import WhatsAppShareButton from '@/shared/components/WhatsAppShareButton';
+import ImportExportBar, { type ImportResult } from '@/shared/components/ImportExportBar';
+import { pickField } from '@/shared/lib/tableExport';
 import { logActivity } from '@/shared/lib/activityLog';
 import Pagination, { usePagination } from '@/shared/components/Pagination';
 import { IconButton, IconLink } from '@/shared/components/RowActions';
-import { PackageOpen, Eye, Pencil, Trash2, Undo2 } from 'lucide-react';
+import { PackagePlus, Eye, Pencil, Trash2, Undo2 } from 'lucide-react';
 
 export default function ActiveLoansPage() {
   const [data, update] = useEquipmentData();
@@ -157,18 +161,130 @@ export default function ActiveLoansPage() {
     }
   }
 
+  function handleImportIssues(rows: Record<string, string>[]): ImportResult {
+    let success = 0;
+    let failed = 0;
+
+    update((prev) => {
+      let types = prev.types;
+      const newAllocations: typeof prev.allocations = [];
+
+      rows.forEach((row) => {
+        const patientName = pickField(row, 'PatientName', 'Patient Name', 'Name').trim();
+        const phone = pickField(row, 'Phone', 'PatientPhone', 'Contact', 'ContactNumber').trim();
+        const typeName = pickField(row, 'EquipmentType', 'Equipment Type', 'Equipment').trim();
+        const token = parseFloat(pickField(row, 'TokenAmount', 'Token Amount', 'Deposit'));
+        const rowIssueDate = pickField(row, 'IssueDate', 'Issue Date').trim() || todayStr();
+        const rowExpectedReturn = pickField(row, 'ExpectedReturn', 'Expected Return').trim();
+        const depositGivenRaw = pickField(row, 'DepositGiven', 'Deposit Given', 'Deposit Received').trim().toLowerCase();
+        const rowReceivedBy = pickField(row, 'ReceivedBy', 'Received By', 'DepositReceivedBy').trim();
+        const rowNotes = pickField(row, 'Notes').trim();
+
+        const type = types.find((t) => t.name.toLowerCase() === typeName.toLowerCase());
+        const rowDepositGiven = ['y', 'yes', 'true', '1'].includes(depositGivenRaw);
+
+        if (!patientName || !phone || !type || Number.isNaN(token)) {
+          failed++;
+          return;
+        }
+        if (rowDepositGiven && !rowReceivedBy) {
+          failed++;
+          return;
+        }
+        const freeUnit = type.units.find((u) => u.status === 'free');
+        if (!freeUnit) {
+          failed++;
+          return;
+        }
+
+        types = types.map((t) =>
+          t.id !== type.id ? t : { ...t, units: t.units.map((u) => (u.id !== freeUnit.id ? u : { ...u, status: 'engaged' as const })) }
+        );
+
+        newAllocations.push({
+          id: uid('alloc'),
+          groupId: uid('grp'),
+          unitId: freeUnit.id,
+          typeId: type.id,
+          patientName,
+          patientPhone: phone,
+          tokenAmount: token,
+          depositGiven: rowDepositGiven,
+          depositReceivedBy: rowDepositGiven ? rowReceivedBy : '',
+          issueDate: rowIssueDate,
+          expectedReturn: rowExpectedReturn,
+          returnDate: '',
+          status: 'active',
+          notes: rowNotes
+        });
+        success++;
+      });
+
+      return { types, allocations: [...prev.allocations, ...newAllocations] };
+    });
+
+    if (success > 0) logActivity('Import issue records', `Imported ${success} issue record(s) from Excel`);
+    return { success, failed };
+  }
+
   return (
     <div>
       <div className="page-head">
         <div className="page-head-icon-row">
           <div className="icon-badge">
-            <PackageOpen />
+            <PackagePlus />
           </div>
           <div>
-          <h2>Active Loans</h2>
+          <h2>Issue Equipment</h2>
           <p className="sub">Equipment currently out with patients. Tap the deposit status to update it.</p>
         </div>
       </div>
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+          <Link to="/equipment-register/issue" className="btn small">
+            + Issue equipment
+          </Link>
+          <ImportExportBar
+            entityLabel="issue records"
+            sampleFilename="issue-equipment-sample.xlsx"
+            sampleHeaders={[
+              'PatientName',
+              'Phone',
+              'EquipmentType',
+              'TokenAmount',
+              'IssueDate',
+              'ExpectedReturn',
+              'DepositGiven',
+              'ReceivedBy',
+              'Notes'
+            ]}
+            sampleRows={[
+              ['Ramesh Patel', '9876543210', 'Wheelchair', 500, '2026-09-01', '2026-10-01', 'Yes', 'Amish Patel', 'Left leg injury'],
+              ['Sita Devi', '9123456780', 'Walking Stick', 100, '2026-09-02', '', 'No', '', '']
+            ]}
+            onImportRows={handleImportIssues}
+            exportFilenameBase="active-equipment-issues"
+            exportTitle="Active Equipment Issues"
+            exportHeaders={['Patient', 'Phone', 'Equipment', 'Unit', 'Token (₹)', 'Deposit', 'Issued', 'Expected Return']}
+            getExportRows={() =>
+              data.allocations
+                .filter((a) => a.status === 'active')
+                .map((a) => {
+                  const t = typeById(data, a.typeId);
+                  const u = unitById(data, a.unitId);
+                  return [
+                    a.patientName,
+                    a.patientPhone,
+                    t ? t.name : '—',
+                    u ? u.unit.label : '—',
+                    a.tokenAmount,
+                    a.depositGiven ? 'Received' : 'Pending',
+                    fmtDate(a.issueDate),
+                    a.expectedReturn ? fmtDate(a.expectedReturn) : '—'
+                  ];
+                })
+            }
+          />
+        </div>
       </div>
 
       <div className="toolbar">

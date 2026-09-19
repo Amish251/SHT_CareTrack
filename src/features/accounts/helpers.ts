@@ -2,26 +2,12 @@ import type { AccountConfig } from './config';
 import type { AccountEntry, AccountLedgerData } from './types';
 
 /**
- * The actual category values are "Other Income" (credit) and "Other Expense"
- * (debit) — NOT a bare "Other" — so every "is this the Other option" check
- * across the module must go through this helper instead of comparing to the
- * literal string 'Other' (which never matches and silently breaks the
- * "please specify" flow).
+ * The purpose text is freeform now (no fixed category list), so this is just
+ * a thin, stable wrapper other code (receipts, exports, listings) can keep
+ * calling without caring how the value is produced.
  */
-export function isOtherCategory(category: string): boolean {
-  return category === 'Other Income' || category === 'Other Expense';
-}
-
-/**
- * How a category should actually be shown — everywhere (listings, exports,
- * receipts): plain categories show as-is, but "Other Income"/"Other Expense"
- * show the person's own explanation instead of a bare, meaningless "Other".
- */
-export function categoryDisplay(entry: Pick<AccountEntry, 'category' | 'categoryNote'>): string {
-  if (isOtherCategory(entry.category) && entry.categoryNote.trim()) {
-    return `${entry.category} — ${entry.categoryNote.trim()}`;
-  }
-  return entry.category;
+export function categoryDisplay(entry: Pick<AccountEntry, 'category'>): string {
+  return entry.category.trim() || '—';
 }
 
 /**

@@ -28,9 +28,6 @@ export default function OverviewPage() {
           <p className="sub">Donations received and expenses paid out by the Trust.</p>
         </div>
       </div>
-        <Link to="/finance/add" className="btn small">
-          + Add entry
-        </Link>
       </div>
 
       <div className="grid" style={{ marginBottom: 28 }}>
@@ -72,7 +69,7 @@ export default function OverviewPage() {
               <tr>
                 <th>Date</th>
                 <th>Type</th>
-                <th>Category</th>
+                <th>Purpose</th>
                 <th>Party</th>
                 <th>Amount</th>
               </tr>

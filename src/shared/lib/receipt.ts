@@ -331,7 +331,7 @@ export async function buildExpenseReceiptPdf(entry: FinanceEntry, data: FinanceD
 
   r.row('Paid to:', entry.partyName || '—');
   if (entry.partyPhone) r.row('Contact number:', entry.partyPhone);
-  r.row('Category:', financeCategoryDisplay(entry));
+  r.row('Purpose:', financeCategoryDisplay(entry));
   r.row('Payment mode:', entry.paymentMode || '—');
 
   r.y += 6;
@@ -400,7 +400,7 @@ export async function buildAccountReceiptPdf(
   r.row('Account:', config.title);
   r.row('Received from:', entry.partyName || '—');
   if (entry.partyPhone) r.row('Contact number:', entry.partyPhone);
-  r.row('Category:', categoryDisplay(entry));
+  r.row('Purpose:', categoryDisplay(entry));
   r.row('Payment mode:', entry.paymentMode || '—');
 
   r.y += 6;
@@ -468,7 +468,7 @@ export async function buildAccountDebitReceiptPdf(
   r.row('Account:', config.title);
   r.row('Paid to:', entry.partyName || '—');
   if (entry.partyPhone) r.row('Contact number:', entry.partyPhone);
-  r.row('Category:', categoryDisplay(entry));
+  r.row('Purpose:', categoryDisplay(entry));
   r.row('Payment mode:', entry.paymentMode || '—');
 
   r.y += 6;

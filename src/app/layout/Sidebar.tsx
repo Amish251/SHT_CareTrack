@@ -11,6 +11,9 @@ interface NavChild {
   adminOnly?: boolean;
   /** Hidden from everyone except the super admin. */
   superAdminOnly?: boolean;
+  /** Extra path prefixes that should also count as "on this section" for highlighting —
+   *  e.g. the Issue Equipment form lives at a different URL than its list/landing page. */
+  alsoActiveOn?: string[];
 }
 
 interface NavItem {
@@ -34,47 +37,43 @@ const NAV_ITEMS: NavItem[] = [
   },
   {
     to: '/equipment-register',
-    label: 'Equipment Register',
-    tag: 'ER',
+    label: 'Medical Sahay',
+    tag: 'MS',
     children: [
-      { to: '/equipment-register', label: 'Equipment & Stock', tag: '01', end: true, adminOnly: true },
-      { to: '/equipment-register/issue', label: 'Issue Equipment', tag: '02' },
-      { to: '/equipment-register/active', label: 'Active Loans', tag: '03' },
-      { to: '/equipment-register/history', label: 'Full History', tag: '04' },
-      { to: '/equipment-register/tokens', label: 'Token Overview', tag: '05', adminOnly: true }
+      { to: '/equipment-register', label: 'Overview', tag: '01', end: true, adminOnly: true },
+      { to: '/equipment-register/types', label: 'Equipment Type', tag: '02', adminOnly: true, alsoActiveOn: ['/equipment-register/types/add'] },
+      { to: '/equipment-register/active', label: 'Issue Equipment', tag: '03', alsoActiveOn: ['/equipment-register/issue'] },
+      { to: '/equipment-register/history', label: 'Full History', tag: '04' }
     ]
   },
   {
     to: '/finance',
-    label: 'Donation',
-    tag: 'DN',
+    label: 'Donation & Expenses',
+    tag: 'DE',
     adminOnly: true,
     children: [
       { to: '/finance', label: 'Overview', tag: '01', end: true },
-      { to: '/finance/add', label: 'Add Entry', tag: '02' },
-      { to: '/finance/records', label: 'All Records', tag: '03' }
+      { to: '/finance/records', label: 'Donation & Expenses Register', tag: '02' }
     ]
   },
   {
     to: '/ambaji-account',
-    label: 'Ambaji Account',
+    label: 'Ambaji',
     tag: 'AM',
     adminOnly: true,
     children: [
       { to: '/ambaji-account', label: 'Overview', tag: '01', end: true },
-      { to: '/ambaji-account/add', label: 'Add Entry', tag: '02' },
-      { to: '/ambaji-account/records', label: 'All Records', tag: '03' }
+      { to: '/ambaji-account/records', label: 'Ambaji Account', tag: '02' }
     ]
   },
   {
     to: '/seoc-account',
-    label: 'SEOC Account',
+    label: 'SEOC',
     tag: 'SO',
     adminOnly: true,
     children: [
       { to: '/seoc-account', label: 'Overview', tag: '01', end: true },
-      { to: '/seoc-account/add', label: 'Add Entry', tag: '02' },
-      { to: '/seoc-account/records', label: 'All Records', tag: '03' }
+      { to: '/seoc-account/records', label: 'SEOC Account', tag: '02' }
     ]
   },
   {
@@ -139,7 +138,9 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
                       key={child.to}
                       to={child.to}
                       end={child.end}
-                      className={({ isActive }) => (isActive ? 'active' : '')}
+                      className={({ isActive }) =>
+                        isActive || child.alsoActiveOn?.some((p) => location.pathname.startsWith(p)) ? 'active' : ''
+                      }
                       onClick={onClose}
                     >
                       <span className="tag">{child.tag}</span>

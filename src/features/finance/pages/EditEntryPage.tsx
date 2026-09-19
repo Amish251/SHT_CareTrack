@@ -1,14 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { useFinanceData } from '../store';
-import {
-  DONATION_CATEGORIES,
-  EXPENSE_CATEGORIES,
-  PAYMENT_MODES,
-  type FinanceKind,
-  type PaymentMode
-} from '../types';
-import { isOtherCategory } from '../helpers';
+import { PAYMENT_MODES, type FinanceKind, type PaymentMode } from '../types';
 import { useToast } from '@/shared/components/ui/Toast';
 import { logActivity } from '@/shared/lib/activityLog';
 import { PencilLine, IndianRupee, UserRound, Phone, CalendarDays } from 'lucide-react';
@@ -30,7 +23,6 @@ export default function EditEntryPage() {
 
   const [kind, setKind] = useState<FinanceKind>('donation');
   const [category, setCategory] = useState('');
-  const [categoryNote, setCategoryNote] = useState('');
   const [amount, setAmount] = useState('');
   const [partyName, setPartyName] = useState('');
   const [partyPhone, setPartyPhone] = useState('');
@@ -44,7 +36,6 @@ export default function EditEntryPage() {
     if (!entry) return;
     setKind(entry.kind);
     setCategory(entry.category);
-    setCategoryNote(entry.categoryNote);
     setAmount(String(entry.amount));
     setPartyName(entry.partyName);
     setPartyPhone(entry.partyPhone);
@@ -65,17 +56,9 @@ export default function EditEntryPage() {
     );
   }
 
-  const categories = kind === 'donation' ? DONATION_CATEGORIES : EXPENSE_CATEGORIES;
-
   function handleKindChange(next: FinanceKind) {
     setKind(next);
-    setCategory(next === 'donation' ? DONATION_CATEGORIES[0] : EXPENSE_CATEGORIES[0]);
-    setCategoryNote('');
-  }
-
-  function handleCategoryChange(next: string) {
-    setCategory(next);
-    if (!isOtherCategory(next)) setCategoryNote('');
+    setCategory('');
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -83,8 +66,8 @@ export default function EditEntryPage() {
     if (!entry) return;
     const amt = parseFloat(amount);
     if (Number.isNaN(amt) || amt <= 0 || !date) return;
-    if (isOtherCategory(category) && !categoryNote.trim()) {
-      showToast('Please specify what "Other" means for this entry.');
+    if (!category.trim()) {
+      showToast(kind === 'donation' ? 'Please say what this donation is for.' : 'Please say what this expense is for.');
       return;
     }
 
@@ -97,8 +80,7 @@ export default function EditEntryPage() {
             : {
                 ...e,
                 kind,
-                category,
-                categoryNote: isOtherCategory(category) ? categoryNote.trim() : '',
+                category: category.trim(),
                 amount: amt,
                 partyName: partyName.trim(),
                 partyPhone: partyPhone.trim(),
@@ -149,28 +131,16 @@ export default function EditEntryPage() {
               </select>
             </div>
             <div>
-              <label htmlFor="edit-fin-category">{kind === 'donation' ? 'Purpose' : 'Category'}</label>
-              <select id="edit-fin-category" value={category} onChange={(e) => handleCategoryChange(e.target.value)}>
-                {categories.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
+              <label htmlFor="edit-fin-category">{kind === 'donation' ? 'What is this donation for?' : 'What is this expense for?'}</label>
+              <input
+                type="text"
+                id="edit-fin-category"
+                required
+                placeholder={kind === 'donation' ? 'e.g. Wheelchair sponsorship' : 'e.g. Auto fare for equipment pickup'}
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+              />
             </div>
-            {isOtherCategory(category) && (
-              <div>
-                <label htmlFor="edit-fin-category-note">Please specify</label>
-                <input
-                  type="text"
-                  id="edit-fin-category-note"
-                  required
-                  placeholder="What is this for?"
-                  value={categoryNote}
-                  onChange={(e) => setCategoryNote(e.target.value)}
-                />
-              </div>
-            )}
             <div>
               <label htmlFor="edit-fin-amount">Amount (₹)</label>
               <div className="field-icon">

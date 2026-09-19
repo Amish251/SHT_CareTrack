@@ -1,15 +1,8 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { useAccountData } from '../store';
-import {
-  ACCOUNT_PAYMENT_MODES,
-  CREDIT_CATEGORIES,
-  DEBIT_CATEGORIES,
-  type AccountEntryKind,
-  type AccountPaymentMode
-} from '../types';
+import { ACCOUNT_PAYMENT_MODES, type AccountEntryKind, type AccountPaymentMode } from '../types';
 import type { AccountConfig } from '../config';
-import { isOtherCategory } from '../helpers';
 import { useToast } from '@/shared/components/ui/Toast';
 import { logActivity } from '@/shared/lib/activityLog';
 import { PencilLine, IndianRupee, UserRound, Phone, CalendarDays } from 'lucide-react';
@@ -31,7 +24,6 @@ export default function AccountEditEntry({ config }: { config: AccountConfig }) 
 
   const [kind, setKind] = useState<AccountEntryKind>('credit');
   const [category, setCategory] = useState('');
-  const [categoryNote, setCategoryNote] = useState('');
   const [amount, setAmount] = useState('');
   const [partyName, setPartyName] = useState('');
   const [partyPhone, setPartyPhone] = useState('');
@@ -45,7 +37,6 @@ export default function AccountEditEntry({ config }: { config: AccountConfig }) 
     if (!entry) return;
     setKind(entry.kind);
     setCategory(entry.category);
-    setCategoryNote(entry.categoryNote);
     setAmount(String(entry.amount));
     setPartyName(entry.partyName);
     setPartyPhone(entry.partyPhone);
@@ -66,18 +57,9 @@ export default function AccountEditEntry({ config }: { config: AccountConfig }) 
     );
   }
 
-  const categories = kind === 'credit' ? CREDIT_CATEGORIES : DEBIT_CATEGORIES;
-
   function handleKindChange(next: AccountEntryKind) {
     setKind(next);
-    const nextCategories = next === 'credit' ? CREDIT_CATEGORIES : DEBIT_CATEGORIES;
-    setCategory(nextCategories[0]);
-    setCategoryNote('');
-  }
-
-  function handleCategoryChange(next: string) {
-    setCategory(next);
-    if (!isOtherCategory(next)) setCategoryNote('');
+    setCategory('');
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -85,8 +67,8 @@ export default function AccountEditEntry({ config }: { config: AccountConfig }) 
     if (!entry) return;
     const amt = parseFloat(amount);
     if (Number.isNaN(amt) || amt <= 0 || !date) return;
-    if (isOtherCategory(category) && !categoryNote.trim()) {
-      showToast('Please specify what "Other" means for this entry.');
+    if (!category.trim()) {
+      showToast(kind === 'credit' ? 'Please say what this credit is for.' : 'Please say what this debit is for.');
       return;
     }
 
@@ -99,8 +81,7 @@ export default function AccountEditEntry({ config }: { config: AccountConfig }) 
             : {
                 ...e,
                 kind,
-                category,
-                categoryNote: isOtherCategory(category) ? categoryNote.trim() : '',
+                category: category.trim(),
                 amount: amt,
                 partyName: partyName.trim(),
                 partyPhone: partyPhone.trim(),
@@ -148,28 +129,16 @@ export default function AccountEditEntry({ config }: { config: AccountConfig }) 
               </select>
             </div>
             <div>
-              <label htmlFor="edit-acct-category">Category</label>
-              <select id="edit-acct-category" value={category} onChange={(e) => handleCategoryChange(e.target.value)}>
-                {categories.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
+              <label htmlFor="edit-acct-category">{kind === 'credit' ? 'What is this credit for?' : 'What is this debit for?'}</label>
+              <input
+                type="text"
+                id="edit-acct-category"
+                required
+                placeholder={kind === 'credit' ? 'e.g. Diwali donation' : 'e.g. Printing pamphlets'}
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+              />
             </div>
-            {isOtherCategory(category) && (
-              <div>
-                <label htmlFor="edit-acct-category-note">Please specify</label>
-                <input
-                  type="text"
-                  id="edit-acct-category-note"
-                  required
-                  placeholder="What is this for?"
-                  value={categoryNote}
-                  onChange={(e) => setCategoryNote(e.target.value)}
-                />
-              </div>
-            )}
             <div>
               <label htmlFor="edit-acct-amount">Amount (₹)</label>
               <div className="field-icon">

@@ -1,22 +1,12 @@
 import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useFinanceData } from '../store';
-import {
-  DONATION_CATEGORIES,
-  EXPENSE_CATEGORIES,
-  PAYMENT_MODES,
-  type FinanceEntry,
-  type FinanceKind,
-  type PaymentMode
-} from '../types';
+import { PAYMENT_MODES, type FinanceKind, type PaymentMode } from '../types';
 import { uid } from '@/shared/lib/storage';
 import { useToast } from '@/shared/components/ui/Toast';
 import { useAuth } from '@/shared/components/AuthGate';
-import { fmtDate, todayStr } from '@/features/equipment-register/helpers';
+import { todayStr } from '@/features/equipment-register/helpers';
 import { logActivity } from '@/shared/lib/activityLog';
-import ImportExportBar, { type ImportResult } from '@/shared/components/ImportExportBar';
-import { pickField } from '@/shared/lib/tableExport';
-import { categoryDisplay, isOtherCategory } from '../helpers';
 import { HandCoins, IndianRupee, UserRound, Phone, CalendarDays } from 'lucide-react';
 
 export default function AddEntryPage() {
@@ -26,8 +16,7 @@ export default function AddEntryPage() {
   const navigate = useNavigate();
 
   const [kind, setKind] = useState<FinanceKind>('donation');
-  const [category, setCategory] = useState(DONATION_CATEGORIES[0]);
-  const [categoryNote, setCategoryNote] = useState('');
+  const [category, setCategory] = useState('');
   const [amount, setAmount] = useState('');
   const [partyName, setPartyName] = useState('');
   const [partyPhone, setPartyPhone] = useState('');
@@ -37,25 +26,17 @@ export default function AddEntryPage() {
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
 
-  const categories = kind === 'donation' ? DONATION_CATEGORIES : EXPENSE_CATEGORIES;
-
   function handleKindChange(next: FinanceKind) {
     setKind(next);
-    setCategory(next === 'donation' ? DONATION_CATEGORIES[0] : EXPENSE_CATEGORIES[0]);
-    setCategoryNote('');
-  }
-
-  function handleCategoryChange(next: string) {
-    setCategory(next);
-    if (!isOtherCategory(next)) setCategoryNote('');
+    setCategory('');
   }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     const amt = parseFloat(amount);
     if (Number.isNaN(amt) || amt <= 0 || !date) return;
-    if (isOtherCategory(category) && !categoryNote.trim()) {
-      showToast('Please specify what "Other" means for this entry.');
+    if (!category.trim()) {
+      showToast(kind === 'donation' ? 'Please say what this donation is for.' : 'Please say what this expense is for.');
       return;
     }
 
@@ -67,8 +48,7 @@ export default function AddEntryPage() {
           {
             id: uid('fin'),
             kind,
-            category,
-            categoryNote: isOtherCategory(category) ? categoryNote.trim() : '',
+            category: category.trim(),
             amount: amt,
             partyName: partyName.trim(),
             partyPhone: partyPhone.trim(),
@@ -98,56 +78,6 @@ export default function AddEntryPage() {
     navigate('/finance/records');
   }
 
-  function handleImportEntries(rows: Record<string, string>[]): ImportResult {
-    let success = 0;
-    let failed = 0;
-
-    update((prev) => {
-      const newEntries: FinanceEntry[] = [];
-      rows.forEach((row) => {
-        const kindRaw = pickField(row, 'Kind', 'Type').trim().toLowerCase();
-        const rowKind: FinanceKind = kindRaw === 'expense' ? 'expense' : 'donation';
-        const rowCategory =
-          pickField(row, 'Category', 'Purpose').trim() || (rowKind === 'donation' ? 'General Donation' : 'Other');
-        const rowCategoryNote = pickField(row, 'CategoryNote', 'Category Note', 'OtherDetail', 'Other Detail').trim();
-        const amt = parseFloat(pickField(row, 'Amount'));
-        const rowPartyName = pickField(row, 'PartyName', 'Party Name', 'DonorName', 'Donor', 'PaidTo').trim();
-        const rowPartyPhone = pickField(row, 'PartyPhone', 'Party Phone', 'Phone', 'Contact').trim();
-        const rowDate = pickField(row, 'Date').trim() || todayStr();
-        const paymentModeRaw = pickField(row, 'PaymentMode', 'Payment Mode').trim();
-        const rowPaymentMode: PaymentMode = (PAYMENT_MODES as readonly string[]).includes(paymentModeRaw)
-          ? (paymentModeRaw as PaymentMode)
-          : 'Cash';
-        const rowReceivedBy = pickField(row, 'ReceivedBy', 'Received By').trim();
-        const rowNotes = pickField(row, 'Notes').trim();
-
-        if (Number.isNaN(amt) || amt <= 0) {
-          failed++;
-          return;
-        }
-
-        newEntries.push({
-          id: uid('fin'),
-          kind: rowKind,
-          category: rowCategory,
-          categoryNote: isOtherCategory(rowCategory) ? rowCategoryNote : '',
-          amount: amt,
-          partyName: rowPartyName,
-          partyPhone: rowPartyPhone,
-          date: rowDate,
-          paymentMode: rowPaymentMode,
-          receivedBy: rowReceivedBy,
-          notes: rowNotes
-        });
-        success++;
-      });
-      return { entries: [...prev.entries, ...newEntries] };
-    });
-
-    if (success > 0) logActivity('Import finance entries', `Imported ${success} entrie(s) from Excel`);
-    return { success, failed };
-  }
-
   return (
     <div>
       <div className="page-head">
@@ -163,43 +93,6 @@ export default function AddEntryPage() {
       </div>
 
       <div className="panel">
-        <ImportExportBar
-          entityLabel="donation/expense entries"
-          sampleFilename="donation-entries-sample.xlsx"
-          sampleHeaders={[
-            'Kind',
-            'Category',
-            'CategoryNote',
-            'Amount',
-            'PartyName',
-            'PartyPhone',
-            'Date',
-            'PaymentMode',
-            'ReceivedBy',
-            'Notes'
-          ]}
-          sampleRows={[
-            ['donation', 'General Donation', '', 1000, 'Rajesh Shah', '9898989898', '2026-09-01', 'UPI', 'Amish Patel', 'Diwali donation'],
-            ['expense', 'Other', 'Auto fare', 350, 'Auto fare', '', '2026-09-02', 'Cash', 'Amish Patel', 'Equipment pickup']
-          ]}
-          onImportRows={handleImportEntries}
-          exportFilenameBase="donation-expense-entries"
-          exportTitle="Donations & Expenses"
-          exportHeaders={['Date', 'Type', 'Category', 'Party', 'Phone', 'Amount (₹)', 'Payment Mode', 'Received By', 'Notes']}
-          getExportRows={() =>
-            data.entries.map((e) => [
-              fmtDate(e.date),
-              e.kind === 'donation' ? 'Donation' : 'Expense',
-              categoryDisplay(e),
-              e.partyName || '—',
-              e.partyPhone || '—',
-              e.amount,
-              e.paymentMode || '—',
-              e.receivedBy || '—',
-              e.notes || '—'
-            ])
-          }
-        />
         <form onSubmit={handleSubmit}>
           <div className="field-row">
             <div>
@@ -210,28 +103,16 @@ export default function AddEntryPage() {
               </select>
             </div>
             <div>
-              <label htmlFor="fin-category">{kind === 'donation' ? 'Purpose' : 'Category'}</label>
-              <select id="fin-category" value={category} onChange={(e) => handleCategoryChange(e.target.value)}>
-                {categories.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
+              <label htmlFor="fin-category">{kind === 'donation' ? 'What is this donation for?' : 'What is this expense for?'}</label>
+              <input
+                type="text"
+                id="fin-category"
+                required
+                placeholder={kind === 'donation' ? 'e.g. Wheelchair sponsorship' : 'e.g. Auto fare for equipment pickup'}
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+              />
             </div>
-            {isOtherCategory(category) && (
-              <div>
-                <label htmlFor="fin-category-note">Please specify</label>
-                <input
-                  type="text"
-                  id="fin-category-note"
-                  required
-                  placeholder="What is this for?"
-                  value={categoryNote}
-                  onChange={(e) => setCategoryNote(e.target.value)}
-                />
-              </div>
-            )}
             <div>
               <label htmlFor="fin-amount">Amount (₹)</label>
               <div className="field-icon">

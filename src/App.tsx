@@ -3,12 +3,13 @@ import AppShell from './app/layout/AppShell';
 import { useAuth } from './shared/components/AuthGate';
 import AdminOnly from './shared/components/AdminOnly';
 import SuperAdminOnly from './shared/components/SuperAdminOnly';
-import DashboardPage from './features/equipment-register/pages/DashboardPage';
+import DashboardPage from './features/equipment-register/pages/OverviewPage';
 import MainDashboardPage from './features/dashboard/pages/DashboardPage';
+import EquipmentTypePage from './features/equipment-register/pages/EquipmentTypePage';
+import AddEquipmentTypePage from './features/equipment-register/pages/AddEquipmentTypePage';
 import IssuePage from './features/equipment-register/pages/IssuePage';
 import ActiveLoansPage from './features/equipment-register/pages/ActiveLoansPage';
 import HistoryPage from './features/equipment-register/pages/HistoryPage';
-import TokenOverviewPage from './features/equipment-register/pages/TokenOverviewPage';
 import EditAllocationPage from './features/equipment-register/pages/EditAllocationPage';
 import FinanceOverviewPage from './features/finance/pages/OverviewPage';
 import AddEntryPage from './features/finance/pages/AddEntryPage';
@@ -32,7 +33,7 @@ import LogPage from './features/settings/pages/LogPage';
 function HomeRedirect() {
   const { session } = useAuth();
   const isAdminLike = session.role === 'admin' || session.role === 'superadmin';
-  return <Navigate to={isAdminLike ? '/dashboard' : '/equipment-register/issue'} replace />;
+  return <Navigate to={isAdminLike ? '/dashboard' : '/equipment-register/active'} replace />;
 }
 
 /** Admins (and the super admin) land on Users first; staff (who can't see
@@ -61,7 +62,7 @@ export default function App() {
         />
 
         {/* Equipment Register module — nav lives in the sidebar now, see app/layout/Sidebar.tsx.
-            Dashboard (adding equipment types) is admin-only; staff can issue, view active loans,
+            Overview and Equipment Type are admin-only; staff can issue, view active loans,
             and browse history but can't add/remove equipment types. */}
         <Route
           path="/equipment-register"
@@ -75,13 +76,23 @@ export default function App() {
         <Route path="/equipment-register/active" element={<ActiveLoansPage />} />
         <Route path="/equipment-register/history" element={<HistoryPage />} />
         <Route
-          path="/equipment-register/tokens"
+          path="/equipment-register/types"
           element={
-            <AdminOnly message="Token Overview is limited to admin accounts.">
-              <TokenOverviewPage />
+            <AdminOnly message="Equipment Type is limited to admin accounts.">
+              <EquipmentTypePage />
             </AdminOnly>
           }
         />
+        <Route
+          path="/equipment-register/types/add"
+          element={
+            <AdminOnly message="Equipment Type is limited to admin accounts.">
+              <AddEquipmentTypePage />
+            </AdminOnly>
+          }
+        />
+        {/* Old bookmarked link — Token Overview is now folded into the Overview page above. */}
+        <Route path="/equipment-register/tokens" element={<Navigate to="/equipment-register" replace />} />
         <Route path="/equipment-register/edit/:id" element={<EditAllocationPage />} />
 
         {/* Finance module — admin-only. Staff accounts never see donation/expense records. */}

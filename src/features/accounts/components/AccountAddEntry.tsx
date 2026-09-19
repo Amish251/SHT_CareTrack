@@ -1,23 +1,13 @@
 import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAccountData } from '../store';
-import {
-  ACCOUNT_PAYMENT_MODES,
-  CREDIT_CATEGORIES,
-  DEBIT_CATEGORIES,
-  type AccountEntry,
-  type AccountEntryKind,
-  type AccountPaymentMode
-} from '../types';
+import { ACCOUNT_PAYMENT_MODES, type AccountEntryKind, type AccountPaymentMode } from '../types';
 import type { AccountConfig } from '../config';
-import { categoryDisplay, isOtherCategory } from '../helpers';
 import { uid } from '@/shared/lib/storage';
 import { useToast } from '@/shared/components/ui/Toast';
 import { useAuth } from '@/shared/components/AuthGate';
 import { todayStr } from '@/features/equipment-register/helpers';
 import { logActivity } from '@/shared/lib/activityLog';
-import ImportExportBar, { type ImportResult } from '@/shared/components/ImportExportBar';
-import { pickField } from '@/shared/lib/tableExport';
 import { HandCoins, IndianRupee, UserRound, Phone, CalendarDays } from 'lucide-react';
 
 export default function AccountAddEntry({ config }: { config: AccountConfig }) {
@@ -27,8 +17,7 @@ export default function AccountAddEntry({ config }: { config: AccountConfig }) {
   const navigate = useNavigate();
 
   const [kind, setKind] = useState<AccountEntryKind>('credit');
-  const [category, setCategory] = useState(CREDIT_CATEGORIES[0]);
-  const [categoryNote, setCategoryNote] = useState('');
+  const [category, setCategory] = useState('');
   const [amount, setAmount] = useState('');
   const [partyName, setPartyName] = useState('');
   const [partyPhone, setPartyPhone] = useState('');
@@ -38,25 +27,17 @@ export default function AccountAddEntry({ config }: { config: AccountConfig }) {
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
 
-  const categories = kind === 'credit' ? CREDIT_CATEGORIES : DEBIT_CATEGORIES;
-
   function handleKindChange(next: AccountEntryKind) {
     setKind(next);
-    setCategory(next === 'credit' ? CREDIT_CATEGORIES[0] : DEBIT_CATEGORIES[0]);
-    setCategoryNote('');
-  }
-
-  function handleCategoryChange(next: string) {
-    setCategory(next);
-    if (!isOtherCategory(next)) setCategoryNote('');
+    setCategory('');
   }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     const amt = parseFloat(amount);
     if (Number.isNaN(amt) || amt <= 0 || !date) return;
-    if (isOtherCategory(category) && !categoryNote.trim()) {
-      showToast('Please specify what "Other" means for this entry.');
+    if (!category.trim()) {
+      showToast(kind === 'credit' ? 'Please say what this credit is for.' : 'Please say what this debit is for.');
       return;
     }
 
@@ -68,8 +49,7 @@ export default function AccountAddEntry({ config }: { config: AccountConfig }) {
           {
             id: uid('acct'),
             kind,
-            category,
-            categoryNote: isOtherCategory(category) ? categoryNote.trim() : '',
+            category: category.trim(),
             amount: amt,
             partyName: partyName.trim(),
             partyPhone: partyPhone.trim(),
@@ -95,56 +75,6 @@ export default function AccountAddEntry({ config }: { config: AccountConfig }) {
     navigate(`/${config.slug}/records`);
   }
 
-  function handleImportEntries(rows: Record<string, string>[]): ImportResult {
-    let success = 0;
-    let failed = 0;
-
-    update((prev) => {
-      const newEntries: AccountEntry[] = [];
-      rows.forEach((row) => {
-        const kindRaw = pickField(row, 'Kind', 'Type').trim().toLowerCase();
-        const rowKind: AccountEntryKind = kindRaw === 'debit' ? 'debit' : 'credit';
-        const rowCategory =
-          pickField(row, 'Category', 'Purpose').trim() || (rowKind === 'credit' ? 'Other Income' : 'Other Expense');
-        const rowCategoryNote = pickField(row, 'CategoryNote', 'Category Note', 'OtherDetail', 'Other Detail').trim();
-        const amt = parseFloat(pickField(row, 'Amount'));
-        const rowPartyName = pickField(row, 'PartyName', 'Party Name', 'Name').trim();
-        const rowPartyPhone = pickField(row, 'PartyPhone', 'Party Phone', 'Phone', 'Contact').trim();
-        const rowDate = pickField(row, 'Date').trim() || todayStr();
-        const paymentModeRaw = pickField(row, 'PaymentMode', 'Payment Mode').trim();
-        const rowPaymentMode: AccountPaymentMode = (ACCOUNT_PAYMENT_MODES as readonly string[]).includes(paymentModeRaw)
-          ? (paymentModeRaw as AccountPaymentMode)
-          : 'Cash';
-        const rowHandledBy = pickField(row, 'HandledBy', 'Handled By', 'ReceivedBy', 'Received By').trim();
-        const rowNotes = pickField(row, 'Notes').trim();
-
-        if (Number.isNaN(amt) || amt <= 0) {
-          failed++;
-          return;
-        }
-
-        newEntries.push({
-          id: uid('acct'),
-          kind: rowKind,
-          category: rowCategory,
-          categoryNote: isOtherCategory(rowCategory) ? rowCategoryNote : '',
-          amount: amt,
-          partyName: rowPartyName,
-          partyPhone: rowPartyPhone,
-          date: rowDate,
-          paymentMode: rowPaymentMode,
-          handledBy: rowHandledBy,
-          notes: rowNotes
-        });
-        success++;
-      });
-      return { entries: [...prev.entries, ...newEntries] };
-    });
-
-    if (success > 0) logActivity(`Import ${config.title} entries`, `Imported ${success} entrie(s) from Excel`);
-    return { success, failed };
-  }
-
   return (
     <div>
       <div className="page-head">
@@ -160,43 +90,6 @@ export default function AccountAddEntry({ config }: { config: AccountConfig }) {
       </div>
 
       <div className="panel">
-        <ImportExportBar
-          entityLabel={`${config.title} entries`}
-          sampleFilename={`${config.slug}-sample.xlsx`}
-          sampleHeaders={[
-            'Kind',
-            'Category',
-            'CategoryNote',
-            'Amount',
-            'PartyName',
-            'PartyPhone',
-            'Date',
-            'PaymentMode',
-            'HandledBy',
-            'Notes'
-          ]}
-          sampleRows={[
-            ['credit', 'Donation', '', 1000, 'Rajesh Shah', '9898989898', '2026-09-01', 'UPI', 'Amish Patel', 'Diwali donation'],
-            ['debit', 'Other Expense', 'Printing pamphlets', 350, 'Local Press', '', '2026-09-02', 'Cash', 'Amish Patel', 'Event material']
-          ]}
-          onImportRows={handleImportEntries}
-          exportFilenameBase={`${config.slug}-entries`}
-          exportTitle={`${config.title} — Credit & Debit`}
-          exportHeaders={['Date', 'Type', 'Category', 'Party', 'Phone', 'Amount (₹)', 'Payment Mode', 'Handled By', 'Notes']}
-          getExportRows={() =>
-            data.entries.map((e) => [
-              e.date,
-              e.kind === 'credit' ? 'Credit' : 'Debit',
-              categoryDisplay(e),
-              e.partyName || '—',
-              e.partyPhone || '—',
-              e.amount,
-              e.paymentMode || '—',
-              e.handledBy || '—',
-              e.notes || '—'
-            ])
-          }
-        />
         <form onSubmit={handleSubmit}>
           <div className="field-row">
             <div>
@@ -207,28 +100,16 @@ export default function AccountAddEntry({ config }: { config: AccountConfig }) {
               </select>
             </div>
             <div>
-              <label htmlFor="acct-category">Category</label>
-              <select id="acct-category" value={category} onChange={(e) => handleCategoryChange(e.target.value)}>
-                {categories.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
+              <label htmlFor="acct-category">{kind === 'credit' ? 'What is this credit for?' : 'What is this debit for?'}</label>
+              <input
+                type="text"
+                id="acct-category"
+                required
+                placeholder={kind === 'credit' ? 'e.g. Diwali donation' : 'e.g. Printing pamphlets'}
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+              />
             </div>
-            {isOtherCategory(category) && (
-              <div>
-                <label htmlFor="acct-category-note">Please specify</label>
-                <input
-                  type="text"
-                  id="acct-category-note"
-                  required
-                  placeholder="What is this for?"
-                  value={categoryNote}
-                  onChange={(e) => setCategoryNote(e.target.value)}
-                />
-              </div>
-            )}
             <div>
               <label htmlFor="acct-amount">Amount (₹)</label>
               <div className="field-icon">

@@ -1,13 +1,22 @@
 import { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useAccountData } from '../store';
-import type { AccountEntryKind } from '../types';
+import {
+  ACCOUNT_PAYMENT_MODES,
+  type AccountEntry,
+  type AccountEntryKind,
+  type AccountPaymentMode
+} from '../types';
 import type { AccountConfig } from '../config';
 import { accountDebitReceiptNumber, accountReceiptNumber, categoryDisplay } from '../helpers';
-import { fmtDate } from '@/features/equipment-register/helpers';
+import { fmtDate, todayStr } from '@/features/equipment-register/helpers';
+import { uid } from '@/shared/lib/storage';
 import { useToast } from '@/shared/components/ui/Toast';
 import { logActivity } from '@/shared/lib/activityLog';
 import PdfPreviewModal from '@/shared/components/PdfPreviewModal';
 import WhatsAppShareButton from '@/shared/components/WhatsAppShareButton';
+import ImportExportBar, { type ImportResult } from '@/shared/components/ImportExportBar';
+import { pickField } from '@/shared/lib/tableExport';
 import Pagination, { usePagination } from '@/shared/components/Pagination';
 import { IconButton, IconLink } from '@/shared/components/RowActions';
 import { Receipt, Eye, Pencil, Trash2 } from 'lucide-react';
@@ -128,6 +137,54 @@ export default function AccountRecords({ config }: { config: AccountConfig }) {
     }
   }
 
+  function handleImportEntries(rows: Record<string, string>[]): ImportResult {
+    let success = 0;
+    let failed = 0;
+
+    update((prev) => {
+      const newEntries: AccountEntry[] = [];
+      rows.forEach((row) => {
+        const kindRaw = pickField(row, 'Kind', 'Type').trim().toLowerCase();
+        const rowKind: AccountEntryKind = kindRaw === 'debit' ? 'debit' : 'credit';
+        const rowCategory =
+          pickField(row, 'Category', 'Purpose').trim() || (rowKind === 'credit' ? 'Other Income' : 'Other Expense');
+        const amt = parseFloat(pickField(row, 'Amount'));
+        const rowPartyName = pickField(row, 'PartyName', 'Party Name', 'Name').trim();
+        const rowPartyPhone = pickField(row, 'PartyPhone', 'Party Phone', 'Phone', 'Contact').trim();
+        const rowDate = pickField(row, 'Date').trim() || todayStr();
+        const paymentModeRaw = pickField(row, 'PaymentMode', 'Payment Mode').trim();
+        const rowPaymentMode: AccountPaymentMode = (ACCOUNT_PAYMENT_MODES as readonly string[]).includes(paymentModeRaw)
+          ? (paymentModeRaw as AccountPaymentMode)
+          : 'Cash';
+        const rowHandledBy = pickField(row, 'HandledBy', 'Handled By', 'ReceivedBy', 'Received By').trim();
+        const rowNotes = pickField(row, 'Notes').trim();
+
+        if (Number.isNaN(amt) || amt <= 0) {
+          failed++;
+          return;
+        }
+
+        newEntries.push({
+          id: uid('acct'),
+          kind: rowKind,
+          category: rowCategory,
+          amount: amt,
+          partyName: rowPartyName,
+          partyPhone: rowPartyPhone,
+          date: rowDate,
+          paymentMode: rowPaymentMode,
+          handledBy: rowHandledBy,
+          notes: rowNotes
+        });
+        success++;
+      });
+      return { entries: [...prev.entries, ...newEntries] };
+    });
+
+    if (success > 0) logActivity(`Import ${config.title} entries`, `Imported ${success} entrie(s) from Excel`);
+    return { success, failed };
+  }
+
   return (
     <div>
       <div className="page-head">
@@ -140,6 +197,37 @@ export default function AccountRecords({ config }: { config: AccountConfig }) {
           <p className="sub">Every credit and debit entry recorded for {config.title}.</p>
         </div>
       </div>
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+          <Link to={`/${config.slug}/add`} className="btn small">
+            + Add entry
+          </Link>
+          <ImportExportBar
+            entityLabel={`${config.title} entries`}
+            sampleFilename={`${config.slug}-sample.xlsx`}
+            sampleHeaders={['Kind', 'Purpose', 'Amount', 'PartyName', 'PartyPhone', 'Date', 'PaymentMode', 'HandledBy', 'Notes']}
+            sampleRows={[
+              ['credit', 'Diwali donation', 1000, 'Rajesh Shah', '9898989898', '2026-09-01', 'UPI', 'Amish Patel', ''],
+              ['debit', 'Printing pamphlets', 350, 'Local Press', '', '2026-09-02', 'Cash', 'Amish Patel', 'Event material']
+            ]}
+            onImportRows={handleImportEntries}
+            exportFilenameBase={`${config.slug}-entries`}
+            exportTitle={`${config.title} — Credit & Debit`}
+            exportHeaders={['Date', 'Type', 'Purpose', 'Party', 'Phone', 'Amount (₹)', 'Payment Mode', 'Handled By', 'Notes']}
+            getExportRows={() =>
+              data.entries.map((e) => [
+                e.date,
+                e.kind === 'credit' ? 'Credit' : 'Debit',
+                categoryDisplay(e),
+                e.partyName || '—',
+                e.partyPhone || '—',
+                e.amount,
+                e.paymentMode || '—',
+                e.handledBy || '—',
+                e.notes || '—'
+              ])
+            }
+          />
+        </div>
       </div>
 
       <div className="toolbar">
@@ -162,7 +250,7 @@ export default function AccountRecords({ config }: { config: AccountConfig }) {
             <tr>
               <th>Date</th>
               <th>Type</th>
-              <th>Category</th>
+              <th>Purpose</th>
               <th>Party</th>
               <th>Amount</th>
               <th>Notes</th>

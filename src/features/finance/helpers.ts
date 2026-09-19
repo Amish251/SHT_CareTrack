@@ -1,22 +1,12 @@
 import type { FinanceData, FinanceEntry } from './types';
 
-/** True for the literal "Other" category value used by both DONATION_CATEGORIES and EXPENSE_CATEGORIES. */
-export function isOtherCategory(category: string): boolean {
-  return category === 'Other';
-}
-
 /**
- * How a category should actually be shown — everywhere (listings, exports,
- * receipts): plain categories show as-is, but "Other" shows the person's own
- * explanation instead of a bare, meaningless "Other". Mirrors
- * `categoryDisplay` in the accounts module, for consistency between Donation
- * and the Ambaji/SEOC ledgers.
+ * The purpose text is freeform now (no fixed category list), so this is just
+ * a thin, stable wrapper other code (receipts, exports, listings) can keep
+ * calling without caring how the value is produced.
  */
-export function categoryDisplay(entry: Pick<FinanceEntry, 'category' | 'categoryNote'>): string {
-  if (isOtherCategory(entry.category) && entry.categoryNote.trim()) {
-    return `Other — ${entry.categoryNote.trim()}`;
-  }
-  return entry.category;
+export function categoryDisplay(entry: Pick<FinanceEntry, 'category'>): string {
+  return entry.category.trim() || '—';
 }
 
 /**
