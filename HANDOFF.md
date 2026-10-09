@@ -31,6 +31,34 @@ stored client-side in `localStorage` (namespaced per module, see
    history / earlier chat — see "This session" below for what changed
    since.)
 
+### Latest session — Edit Record can now change equipment
+`src/features/equipment-register/pages/EditAllocationPage.tsx` rewritten.
+- Edit Record now shows **every item issued in that visit** (all allocations
+  sharing a `groupId`), not just the one row you clicked.
+- For each active item you can: change type/unit, change its deposit amount,
+  **Remove** it (unit is freed and the allocation deleted), and
+  **+ Add another equipment** (new allocation joins the same group, unit engaged).
+- Units swapped out are freed, new ones engaged, in one atomic `update()`;
+  a guard rejects the save if a chosen unit was taken meanwhile.
+- Patient name/phone/dates/deposit-received/notes apply to all items in the group.
+- Already-returned items in the group are shown read-only. Editing a record that
+  is itself returned (from History) only allows details + deposit, no equipment changes.
+- Cannot remove the last item (delete the record instead).
+
+### PENDING / NOT YET DONE
+1. **Not run in a browser.** Sandbox had no node_modules/network, so only a
+   syntax check was done. Run `npm install && npm run build && npm run dev`
+   and test: edit a multi-item record, swap a unit, add an item, remove an item,
+   confirm Equipment Type page free/engaged counts update correctly.
+2. Receipt PDFs (`buildDepositReceiptPdf`) already read the whole group, but
+   verify they reflect added/removed items after an edit.
+3. Edit link is per-row; Active Loans/History still show one row per item
+   (grouped only by an "N items" pill). Consider grouping rows per visit.
+4. Optional: per-item "Mark returned" inside the Edit page; edit of mixed
+   returned/active groups from History.
+5. Optional: show a before/after summary or activity-log detail of which items
+   were added/removed (currently logs only the item count).
+
 ### This session — merged nav, self-service password, PDF logo, PWA icons
 1. **Merged the double-nav layout.** The Sidebar (`app/layout/Sidebar.tsx`)
    is now the single source of navigation: each module (Equipment
