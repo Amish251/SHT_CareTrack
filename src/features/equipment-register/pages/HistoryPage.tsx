@@ -1,12 +1,18 @@
 import { useMemo, useState } from 'react';
 import { useEquipmentData } from '../store';
-import { allocationsInGroup, fmtDate, typeById, unitById } from '../helpers';
+import { allocationsInGroup, applyDelete, buildVisits, describeUnit, fmtDate, typeById, unitById, type Visit } from '../helpers';
 import { useToast } from '@/shared/components/ui/Toast';
+import { logActivity } from '@/shared/lib/activityLog';
 import PdfPreviewModal from '@/shared/components/PdfPreviewModal';
 import WhatsAppShareButton from '@/shared/components/WhatsAppShareButton';
 import Pagination, { usePagination } from '@/shared/components/Pagination';
 import { IconButton, IconLink } from '@/shared/components/RowActions';
 import { History, Eye, Pencil, Trash2 } from 'lucide-react';
+
+/** The item whose deposit details print on the receipt: first one with a deposit received, else the first. */
+function receiptPrimary(visit: Visit) {
+  return visit.items.find((a) => a.depositGiven) ?? visit.primary;
+}
 
 export default function HistoryPage() {
   const [data, update] = useEquipmentData();
@@ -18,42 +24,35 @@ export default function HistoryPage() {
 
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return data.allocations
-      .slice()
-      .sort((a, b) => (a.issueDate < b.issueDate ? 1 : -1))
-      .filter((a) => {
-        if (typeFilter && a.typeId !== typeFilter) return false;
-        if (statusFilter && a.status !== statusFilter) return false;
+    return buildVisits(data.allocations)
+      .filter((v) => {
+        if (typeFilter && !v.items.some((a) => a.typeId === typeFilter)) return false;
+        // "Active" = anything in the visit is still out; "Returned" = everything is back.
+        if (statusFilter === 'active' && v.active.length === 0) return false;
+        if (statusFilter === 'returned' && v.status !== 'returned') return false;
         if (q) {
-          const hay = `${a.patientName} ${a.patientPhone}`.toLowerCase();
+          const hay = `${v.primary.patientName} ${v.primary.patientPhone}`.toLowerCase();
           if (!hay.includes(q)) return false;
         }
         return true;
-      });
+      })
+      .sort((a, b) => (a.primary.issueDate < b.primary.issueDate ? 1 : -1));
   }, [data.allocations, query, typeFilter, statusFilter]);
 
   const pager = usePagination(rows, 10);
 
-  function handleDelete(allocationId: string) {
-    const allocation = data.allocations.find((a) => a.id === allocationId);
-    if (!allocation) return;
-    if (!confirm(`Delete this record for ${allocation.patientName}? This can't be undone.`)) return;
+  /** Deletes the whole visit — every item in it. Units held by still-active items are freed. */
+  function handleDelete(visit: Visit) {
+    const n = visit.items.length;
+    const what = n > 1 ? `this visit (${n} items)` : 'this record';
+    if (!confirm(`Delete ${what} for ${visit.primary.patientName}? This can't be undone.`)) return;
+    const ids = new Set(visit.items.map((a) => a.id));
+    const names = visit.items.map((a) => describeUnit(data, a.typeId, a.unitId)).join(', ');
 
-    update((prev) => ({
-      types: prev.types.map((t) =>
-        t.id !== allocation.typeId
-          ? t
-          : {
-              ...t,
-              units: t.units.map((u) =>
-                u.id !== allocation.unitId ? u : { ...u, status: allocation.status === 'active' ? 'free' : u.status }
-              )
-            }
-      ),
-      allocations: prev.allocations.filter((a) => a.id !== allocationId)
-    }));
+    update((prev) => applyDelete(prev, ids));
 
-    showToast('Record deleted.');
+    logActivity('Delete loan record', `Deleted ${names} for ${visit.primary.patientName}`);
+    showToast(n > 1 ? `${n} items deleted.` : 'Record deleted.');
   }
 
   function closePreview() {
@@ -61,9 +60,8 @@ export default function HistoryPage() {
     setPreview(null);
   }
 
-  async function handleViewReceipt(allocationId: string) {
-    const allocation = data.allocations.find((a) => a.id === allocationId);
-    if (!allocation) return;
+  async function handleViewReceipt(visit: Visit) {
+    const allocation = receiptPrimary(visit);
     const group = allocationsInGroup(data, allocation);
     showToast('Preparing receipt…');
     try {
@@ -77,9 +75,8 @@ export default function HistoryPage() {
     }
   }
 
-  async function handleSendReceipt(allocationId: string) {
-    const allocation = data.allocations.find((a) => a.id === allocationId);
-    if (!allocation) return;
+  async function handleSendReceipt(visit: Visit) {
+    const allocation = receiptPrimary(visit);
     const group = allocationsInGroup(data, allocation);
     const type = typeById(data, allocation.typeId);
     showToast('Preparing receipt…');
@@ -110,7 +107,7 @@ export default function HistoryPage() {
           </div>
           <div>
           <h2>Full History</h2>
-          <p className="sub">Every allocation ever recorded — active and returned.</p>
+          <p className="sub">One row per patient visit — active, partly returned and returned.</p>
         </div>
       </div>
       </div>
@@ -159,56 +156,75 @@ export default function HistoryPage() {
                 </td>
               </tr>
             ) : (
-              pager.pageItems.map((a) => {
-                const t = typeById(data, a.typeId);
-                const found = unitById(data, a.unitId);
-                const group = allocationsInGroup(data, a);
+              pager.pageItems.map((v) => {
+                const p = v.primary;
+                const multi = v.items.length > 1;
+                const allReceived = v.items.every((a) => a.depositGiven);
+                // Edit opens on an item still out when there is one, so equipment stays editable.
+                const editId = (v.active[0] ?? p).id;
+                const statusLabel = v.status === 'active' ? 'Active' : v.status === 'returned' ? 'Returned' : 'Partly returned';
                 return (
-                  <tr key={a.id}>
+                  <tr key={v.key}>
                     <td>
-                      <strong>{a.patientName}</strong>
-                      {group.length > 1 && (
+                      <strong>{p.patientName}</strong>
+                      {multi && (
                         <span className="pill" style={{ marginLeft: 6, background: 'rgba(31, 111, 178, 0.12)', color: 'var(--primary-deep)' }}>
-                          {group.length} items
+                          {v.items.length} items
                         </span>
                       )}
-                      {a.patientPhone && <div style={{ fontSize: 11, color: 'var(--slate)' }}>{a.patientPhone}</div>}
+                      {p.patientPhone && <div style={{ fontSize: 11, color: 'var(--slate)' }}>{p.patientPhone}</div>}
                     </td>
                     <td>
-                      {t ? t.name : '—'}{' '}
-                      <span style={{ color: 'var(--slate)', fontSize: '11.5px' }}>
-                        ({found ? found.unit.label : '—'})
-                      </span>
+                      {v.items.map((a) => {
+                        const t = typeById(data, a.typeId);
+                        const found = unitById(data, a.unitId);
+                        return (
+                          <div key={a.id} style={{ padding: multi ? '2px 0' : 0 }}>
+                            {t ? t.name : '—'}{' '}
+                            <span style={{ color: 'var(--slate)', fontSize: '11.5px' }}>
+                              ({found ? found.unit.label : '—'})
+                            </span>
+                            {multi && (
+                              <span className="mono" style={{ color: 'var(--slate)', fontSize: '11.5px', marginLeft: 6 }}>
+                                ₹{a.tokenAmount}
+                                {' · '}
+                                {a.status === 'returned' ? `returned ${fmtDate(a.returnDate)}` : 'still out'}
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })}
                     </td>
-                    <td className="mono">₹{a.tokenAmount}</td>
-                    <td>
-                      <span className={`pill ${a.depositGiven ? 'yes' : 'no'}`}>
-                        {a.depositGiven ? 'Received' : 'Pending'}
-                      </span>
+                    <td className="mono">
+                      ₹{v.totalToken}
+                      {multi && <div style={{ fontSize: 10.5, color: 'var(--slate)' }}>total</div>}
                     </td>
-                    <td>{fmtDate(a.issueDate)}</td>
-                    <td>{a.returnDate ? fmtDate(a.returnDate) : '—'}</td>
                     <td>
-                      <span className={`pill ${a.status}`}>{a.status === 'active' ? 'Active' : 'Returned'}</span>
+                      <span className={`pill ${allReceived ? 'yes' : 'no'}`}>{allReceived ? 'Received' : 'Pending'}</span>
+                    </td>
+                    <td>{fmtDate(p.issueDate)}</td>
+                    <td>{v.status === 'returned' && v.latestReturnDate ? fmtDate(v.latestReturnDate) : '—'}</td>
+                    <td>
+                      <span className={`pill ${v.status === 'returned' ? 'returned' : 'active'}`}>{statusLabel}</span>
                     </td>
                     <td className="col-actions">
                       <div className="row-actions">
-                        {a.depositGiven && (
+                        {v.items.some((a) => a.depositGiven) && (
                           <>
-                            <IconButton icon={<Eye />} label="View receipt" onClick={() => handleViewReceipt(a.id)} />
+                            <IconButton icon={<Eye />} label="View receipt" onClick={() => handleViewReceipt(v)} />
                             <WhatsAppShareButton
                               iconOnly
-                              phone={a.patientPhone}
-                              onShare={() => handleSendReceipt(a.id)}
+                              phone={p.patientPhone}
+                              onShare={() => handleSendReceipt(v)}
                             />
                           </>
                         )}
-                        <IconLink icon={<Pencil />} label="Edit record" to={`/equipment-register/edit/${a.id}`} />
+                        <IconLink icon={<Pencil />} label="Edit record" to={`/equipment-register/edit/${editId}`} />
                         <IconButton
                           icon={<Trash2 />}
-                          label="Delete record"
+                          label={multi ? 'Delete whole visit' : 'Delete record'}
                           variant="danger"
-                          onClick={() => handleDelete(a.id)}
+                          onClick={() => handleDelete(v)}
                         />
                       </div>
                     </td>

@@ -1,7 +1,16 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { useEquipmentData } from '../store';
-import { allocationsInGroup, freeUnits, groupKey, typeById, unitById } from '../helpers';
+import {
+  allocationsInGroup,
+  applyReturn,
+  describeUnit,
+  freeUnits,
+  groupKey,
+  promptReturnDate,
+  typeById,
+  unitById
+} from '../helpers';
 import { uid } from '@/shared/lib/storage';
 import { useToast } from '@/shared/components/ui/Toast';
 import { useAuth } from '@/shared/components/AuthGate';
@@ -28,10 +37,9 @@ export default function EditAllocationPage() {
   const group = useMemo(() => (allocation ? allocationsInGroup(data, allocation) : []), [data, allocation]);
   const activeInGroup = group.filter((a) => a.status === 'active');
   const returnedInGroup = group.filter((a) => a.status === 'returned');
-  // Equipment can only be changed while the record is still out with the patient.
-  const canEditItems = allocation?.status === 'active';
-
   const [lines, setLines] = useState<LineItem[]>([]);
+  // Equipment can be changed while anything in the visit is still out with the patient.
+  const canEditItems = activeInGroup.length > 0 || lines.length > 0;
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [issueDate, setIssueDate] = useState('');
@@ -39,7 +47,8 @@ export default function EditAllocationPage() {
   const [depositGiven, setDepositGiven] = useState(false);
   const [receivedBy, setReceivedBy] = useState('');
   const [notes, setNotes] = useState('');
-  const [tokenAmount, setTokenAmount] = useState('');
+  // Deposit edits for already-returned items (used only once nothing is left out).
+  const [returnedTokens, setReturnedTokens] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -51,7 +60,7 @@ export default function EditAllocationPage() {
     setDepositGiven(allocation.depositGiven);
     setReceivedBy(allocation.depositReceivedBy);
     setNotes(allocation.notes);
-    setTokenAmount(String(allocation.tokenAmount));
+    setReturnedTokens({});
     setLines(
       allocationsInGroup(data, allocation)
         .filter((a) => a.status === 'active')
@@ -125,6 +134,23 @@ export default function EditAllocationPage() {
     setLines((prev) => prev.filter((l) => l.key !== key));
   }
 
+  /** Returns one saved item right now (it's persisted immediately — other unsaved edits stay in the form). */
+  function handleReturnLine(line: LineItem) {
+    const saved = group.find((a) => a.id === line.allocId);
+    if (!saved || saved.status !== 'active') return;
+    const label = describeUnit(data, saved.typeId, saved.unitId);
+    const returnDate = promptReturnDate();
+    if (returnDate === null) return;
+
+    update((prev) => applyReturn(prev, new Set([saved.id]), returnDate));
+    setLines((prev) => prev.filter((l) => l.key !== line.key));
+
+    showToast(`${label} marked as returned.`);
+    logActivity('Mark returned', `${label} returned by ${saved.patientName}`);
+  }
+
+  const returnedTokenOf = (a: { id: string; tokenAmount: number }) => returnedTokens[a.id] ?? String(a.tokenAmount);
+
   const totalToken = lines.reduce((sum, l) => sum + (parseFloat(l.tokenAmount) || 0), 0);
 
   function handleDepositToggle(checked: boolean) {
@@ -162,10 +188,46 @@ export default function EditAllocationPage() {
         showToast('Enter a deposit amount for every line.');
         return;
       }
-    } else if (Number.isNaN(parseFloat(tokenAmount))) {
-      showToast('Enter a deposit amount.');
+    } else if (group.some((a) => Number.isNaN(parseFloat(returnedTokenOf(a))))) {
+      showToast('Enter a deposit amount for every item.');
       return;
     }
+
+    // Plain-language list of what this save changes, for the activity log.
+    const changes: string[] = [];
+    if (trimmedName !== allocation.patientName) changes.push(`name ${allocation.patientName} → ${trimmedName}`);
+    if (trimmedPhone !== allocation.patientPhone) changes.push(`phone ${allocation.patientPhone} → ${trimmedPhone}`);
+    if (canEditItems) {
+      const kept = new Set(lines.filter((l) => l.allocId).map((l) => l.allocId as string));
+      const added = lines.filter((l) => !l.allocId).map((l) => describeUnit(data, l.typeId, l.unitId));
+      const removed = activeInGroup
+        .filter((a) => !kept.has(a.id))
+        .map((a) => describeUnit(data, a.typeId, a.unitId));
+      if (added.length) changes.push(`added ${added.join(', ')}`);
+      if (removed.length) changes.push(`removed ${removed.join(', ')}`);
+      for (const l of lines) {
+        const orig = activeInGroup.find((a) => a.id === l.allocId);
+        if (!orig) continue;
+        if (orig.unitId !== l.unitId) {
+          changes.push(`swapped ${describeUnit(data, orig.typeId, orig.unitId)} → ${describeUnit(data, l.typeId, l.unitId)}`);
+        }
+        const newToken = parseFloat(l.tokenAmount);
+        if (newToken !== orig.tokenAmount) {
+          changes.push(`${describeUnit(data, l.typeId, l.unitId)} deposit ₹${orig.tokenAmount} → ₹${newToken}`);
+        }
+      }
+    } else {
+      for (const a of group) {
+        const newToken = parseFloat(returnedTokenOf(a));
+        if (newToken !== a.tokenAmount) {
+          changes.push(`${describeUnit(data, a.typeId, a.unitId)} deposit ₹${a.tokenAmount} → ₹${newToken}`);
+        }
+      }
+    }
+    if (issueDate !== allocation.issueDate) changes.push(`issue date ${issueDate}`);
+    if (expectedReturn !== allocation.expectedReturn) changes.push('expected return date changed');
+    if (depositGiven !== allocation.depositGiven) changes.push(depositGiven ? 'deposit marked received' : 'deposit marked pending');
+    if (notes.trim() !== allocation.notes) changes.push('notes updated');
 
     const gKey = groupKey(allocation);
     const shared = {
@@ -186,11 +248,11 @@ export default function EditAllocationPage() {
         const currentGroup = current ? prev.allocations.filter((a) => groupKey(a) === gKey) : [];
 
         if (!canEditItems) {
-          // Returned record: details only, no equipment changes.
+          // Everything is back: details and per-item deposits only, no equipment changes.
           return {
             ...prev,
             allocations: prev.allocations.map((a) =>
-              a.id !== allocation.id ? a : { ...a, ...shared, tokenAmount: parseFloat(tokenAmount) }
+              groupKey(a) !== gKey ? a : { ...a, ...shared, tokenAmount: parseFloat(returnedTokenOf(a)) }
             )
           };
         }
@@ -270,12 +332,12 @@ export default function EditAllocationPage() {
     setSaving(false);
 
     showToast('Record updated.');
-    logActivity('Edit loan record', `Updated record for ${trimmedName} (${canEditItems ? lines.length + returnedInGroup.length : 1} item(s))`);
-    navigate(allocation.status === 'active' ? '/equipment-register/active' : '/equipment-register/history');
+    logActivity(
+      'Edit loan record',
+      `Updated record for ${trimmedName}: ${changes.length ? changes.join('; ') : 'no changes'}`
+    );
+    navigate(canEditItems ? '/equipment-register/active' : '/equipment-register/history');
   }
-
-  const type = typeById(data, allocation.typeId);
-  const found = unitById(data, allocation.unitId);
 
   return (
     <div>
@@ -288,8 +350,8 @@ export default function EditAllocationPage() {
             <h2>Edit Record</h2>
             <p className="sub">
               {canEditItems
-                ? 'Change patient details, or add, swap and remove the equipment issued in this record.'
-                : `${type ? type.name : '—'} ${found ? `(${found.unit.label})` : ''} — returned records can't have their equipment changed.`}
+                ? 'Change patient details, or add, swap, return and remove the equipment issued in this record.'
+                : 'Everything in this record has been returned, so equipment can no longer be changed — details and deposits still can.'}
             </p>
           </div>
         </div>
@@ -372,7 +434,17 @@ export default function EditAllocationPage() {
                         />
                       </div>
                     </div>
-                    <div style={{ flex: '0 0 auto' }}>
+                    <div style={{ flex: '0 0 auto', display: 'flex', gap: 6 }}>
+                      {line.allocId && (
+                        <button
+                          type="button"
+                          className="btn small secondary"
+                          onClick={() => handleReturnLine(line)}
+                          title="Mark this item as returned and free the unit"
+                        >
+                          Mark returned
+                        </button>
+                      )}
                       <button type="button" className="btn small danger" onClick={() => handleRemoveLine(line.key)}>
                         Remove
                       </button>
@@ -404,6 +476,41 @@ export default function EditAllocationPage() {
             </>
           )}
 
+          {!canEditItems && (
+            <>
+              <label style={{ marginBottom: 8 }}>Items in this record (all returned)</label>
+              {group.map((a) => {
+                const t = typeById(data, a.typeId);
+                const u = unitById(data, a.unitId);
+                return (
+                  <div key={a.id} className="field-row" style={{ alignItems: 'flex-end', marginBottom: 10 }}>
+                    <div>
+                      <label>Equipment</label>
+                      <div style={{ padding: '8px 0' }}>
+                        {t ? t.name : '—'} ({u ? u.unit.label : '—'})
+                      </div>
+                    </div>
+                    <div>
+                      <label htmlFor={`edit-rtoken-${a.id}`}>Deposit (₹)</label>
+                      <div className="field-icon">
+                        <IndianRupee />
+                        <input
+                          type="number"
+                          id={`edit-rtoken-${a.id}`}
+                          min={0}
+                          step={1}
+                          required
+                          value={returnedTokenOf(a)}
+                          onChange={(e) => setReturnedTokens((prev) => ({ ...prev, [a.id]: e.target.value }))}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </>
+          )}
+
           <div className="field-row">
             <div>
               <label htmlFor="edit-name">Patient name</label>
@@ -424,20 +531,6 @@ export default function EditAllocationPage() {
           </div>
 
           <div className="field-row">
-            {!canEditItems && (
-              <div>
-                <label htmlFor="edit-token">Security deposit (token) amount (₹)</label>
-                <input
-                  type="number"
-                  id="edit-token"
-                  min={0}
-                  step={1}
-                  required
-                  value={tokenAmount}
-                  onChange={(e) => setTokenAmount(e.target.value)}
-                />
-              </div>
-            )}
             <div>
               <label htmlFor="edit-issue-date">Issue date</label>
               <input type="date" id="edit-issue-date" required value={issueDate} onChange={(e) => setIssueDate(e.target.value)} />

@@ -45,19 +45,33 @@ stored client-side in `localStorage` (namespaced per module, see
   is itself returned (from History) only allows details + deposit, no equipment changes.
 - Cannot remove the last item (delete the record instead).
 
+### Latest session (2) — visit grouping, per-item return, detailed log
+- **One row per visit** on Active Loans and Full History (`buildVisits()` in
+  `equipment-register/helpers.ts`). Multi-item visits list each item with its
+  deposit; Token column shows the total. Deposit status, receipt, edit and delete
+  now act on the whole visit. Active Loans has a per-item return icon (multi-item
+  visits) plus "Mark all returned". History shows per-item returned dates and a
+  "Partly returned" status. Active Loans delete removes only items still out;
+  History delete removes the whole visit.
+- Shared helpers added: `applyReturn`, `applyDelete`, `describeUnit`,
+  `promptReturnDate` (validates YYYY-MM-DD).
+- **Edit Record**: per-item **Mark returned** button (saves immediately; other
+  unsaved edits stay in the form). Once every item is returned the page switches
+  to details + per-item deposit editing.
+- **Activity log** for edits now lists exactly what changed (items added/removed/
+  swapped, deposit changes, name/phone/dates/notes).
+
 ### PENDING / NOT YET DONE
-1. **Not run in a browser.** Sandbox had no node_modules/network, so only a
-   syntax check was done. Run `npm install && npm run build && npm run dev`
-   and test: edit a multi-item record, swap a unit, add an item, remove an item,
-   confirm Equipment Type page free/engaged counts update correctly.
-2. Receipt PDFs (`buildDepositReceiptPdf`) already read the whole group, but
-   verify they reflect added/removed items after an edit.
-3. Edit link is per-row; Active Loans/History still show one row per item
-   (grouped only by an "N items" pill). Consider grouping rows per visit.
-4. Optional: per-item "Mark returned" inside the Edit page; edit of mixed
-   returned/active groups from History.
-5. Optional: show a before/after summary or activity-log detail of which items
-   were added/removed (currently logs only the item count).
+1. **Still not run in a browser** (no node_modules/network in the sandbox; only
+   a partial type/syntax check). Run `npm install && npm run build && npm run dev`
+   and test: multi-item issue -> return one item from Active Loans -> check History
+   shows "Partly returned" -> edit from both pages -> swap/add/remove items ->
+   confirm Equipment Type free/engaged counts and the Activity Log text.
+2. Verify receipts for visits with a mix of returned/active items.
+3. Excel export on Active Loans is still one row per item (intentional; change if
+   a per-visit export is wanted).
+4. Optional: undo a return; pre-existing legacy rows with no `groupId` each
+   appear as their own visit.
 
 ### This session — merged nav, self-service password, PDF logo, PWA icons
 1. **Merged the double-nav layout.** The Sidebar (`app/layout/Sidebar.tsx`)

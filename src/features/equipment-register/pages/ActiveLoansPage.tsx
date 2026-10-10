@@ -1,6 +1,18 @@
 import { useMemo, useState } from 'react';
 import { useEquipmentData } from '../store';
-import { allocationsInGroup, fmtDate, todayStr, typeById, unitById } from '../helpers';
+import {
+  allocationsInGroup,
+  applyDelete,
+  applyReturn,
+  buildVisits,
+  describeUnit,
+  fmtDate,
+  promptReturnDate,
+  todayStr,
+  typeById,
+  unitById,
+  type Visit
+} from '../helpers';
 import { uid } from '@/shared/lib/storage';
 import { useToast } from '@/shared/components/ui/Toast';
 import { useAuth } from '@/shared/components/AuthGate';
@@ -13,6 +25,11 @@ import Pagination, { usePagination } from '@/shared/components/Pagination';
 import { IconButton, IconLink } from '@/shared/components/RowActions';
 import { PackagePlus, Eye, Pencil, Trash2, Undo2 } from 'lucide-react';
 
+/** The item whose deposit details print on the receipt: first one with a deposit received, else the first. */
+function receiptPrimary(visit: Visit) {
+  return visit.items.find((a) => a.depositGiven) ?? visit.primary;
+}
+
 export default function ActiveLoansPage() {
   const [data, update] = useEquipmentData();
   const { showToast } = useToast();
@@ -22,60 +39,51 @@ export default function ActiveLoansPage() {
   const [typeFilter, setTypeFilter] = useState('');
   const [depositFilter, setDepositFilter] = useState<'' | 'yes' | 'no'>('');
 
-  const active = useMemo(() => {
+  const visits = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return data.allocations
-      .filter((a) => a.status === 'active')
-      .filter((a) => {
-        if (typeFilter && a.typeId !== typeFilter) return false;
-        if (depositFilter === 'yes' && !a.depositGiven) return false;
-        if (depositFilter === 'no' && a.depositGiven) return false;
+    return buildVisits(data.allocations.filter((a) => a.status === 'active'))
+      .filter((v) => {
+        if (typeFilter && !v.items.some((a) => a.typeId === typeFilter)) return false;
+        const allReceived = v.items.every((a) => a.depositGiven);
+        if (depositFilter === 'yes' && !allReceived) return false;
+        if (depositFilter === 'no' && allReceived) return false;
         if (q) {
-          const t = typeById(data, a.typeId);
-          const found = unitById(data, a.unitId);
-          const hay = `${a.patientName} ${a.patientPhone} ${t ? t.name : ''} ${found ? found.unit.label : ''}`.toLowerCase();
+          const itemText = v.items.map((a) => describeUnit(data, a.typeId, a.unitId)).join(' ');
+          const hay = `${v.primary.patientName} ${v.primary.patientPhone} ${itemText}`.toLowerCase();
           if (!hay.includes(q)) return false;
         }
         return true;
       })
-      .sort((a, b) => (a.issueDate < b.issueDate ? 1 : -1));
+      .sort((a, b) => (a.primary.issueDate < b.primary.issueDate ? 1 : -1));
   }, [data, query, typeFilter, depositFilter]);
 
-  const pager = usePagination(active, 10);
+  const pager = usePagination(visits, 10);
 
-  function handleMarkReturned(allocationId: string) {
-    const allocation = data.allocations.find((a) => a.id === allocationId);
-    if (!allocation) return;
-    const found = unitById(data, allocation.unitId);
-    const date = window.prompt('Return date (YYYY-MM-DD)?', todayStr());
-    if (date === null) return;
-    const returnDate = date || todayStr();
+  /** Return every item still out in this visit, or just one of them. */
+  function handleMarkReturned(visit: Visit, onlyId?: string) {
+    const targets = onlyId ? visit.active.filter((a) => a.id === onlyId) : visit.active;
+    if (targets.length === 0) return;
+    const returnDate = promptReturnDate();
+    if (returnDate === null) return;
+    const ids = new Set(targets.map((a) => a.id));
 
-    update((prev) => ({
-      types: prev.types.map((t) =>
-        t.id !== allocation.typeId
-          ? t
-          : { ...t, units: t.units.map((u) => (u.id !== allocation.unitId ? u : { ...u, status: 'free' })) }
-      ),
-      allocations: prev.allocations.map((a) =>
-        a.id !== allocationId ? a : { ...a, status: 'returned', returnDate }
-      )
-    }));
+    update((prev) => applyReturn(prev, ids, returnDate));
 
-    showToast(`${found ? found.unit.label : 'Equipment'} marked as returned.`);
-    logActivity('Mark returned', `${found ? found.unit.label : 'Equipment'} returned by ${allocation.patientName}`);
+    const names = targets.map((a) => describeUnit(data, a.typeId, a.unitId)).join(', ');
+    showToast(targets.length > 1 ? `${targets.length} items marked as returned.` : `${names} marked as returned.`);
+    logActivity('Mark returned', `${names} returned by ${visit.primary.patientName}`);
   }
 
-  function handleToggleDeposit(allocationId: string) {
-    const allocation = data.allocations.find((a) => a.id === allocationId);
-    if (!allocation) return;
+  /** Deposit status is shared across the whole visit. */
+  function handleToggleDeposit(visit: Visit) {
+    const ids = new Set(visit.items.map((a) => a.id));
+    const allReceived = visit.items.every((a) => a.depositGiven);
 
-    if (allocation.depositGiven) {
-      // Turning it back off — no name needed, just clear it.
+    if (allReceived) {
       update((prev) => ({
         ...prev,
         allocations: prev.allocations.map((a) =>
-          a.id !== allocationId ? a : { ...a, depositGiven: false, depositReceivedBy: '' }
+          ids.has(a.id) ? { ...a, depositGiven: false, depositReceivedBy: '' } : a
         )
       }));
       return;
@@ -91,33 +99,28 @@ export default function ActiveLoansPage() {
     update((prev) => ({
       ...prev,
       allocations: prev.allocations.map((a) =>
-        a.id !== allocationId ? a : { ...a, depositGiven: true, depositReceivedBy: receivedBy.trim() }
+        ids.has(a.id) ? { ...a, depositGiven: true, depositReceivedBy: receivedBy.trim() } : a
       )
     }));
   }
 
-  function handleDelete(allocationId: string) {
-    const allocation = data.allocations.find((a) => a.id === allocationId);
-    if (!allocation) return;
-    if (!confirm(`Delete this record for ${allocation.patientName}? This frees up the unit and can't be undone.`))
+  /** Deletes the items still out in this visit (already-returned items stay in History). */
+  function handleDelete(visit: Visit) {
+    const n = visit.active.length;
+    const what = n > 1 ? `these ${n} items` : 'this record';
+    if (!confirm(`Delete ${what} for ${visit.primary.patientName}? This frees up the unit${n > 1 ? 's' : ''} and can't be undone.`))
       return;
+    const ids = new Set(visit.active.map((a) => a.id));
+    const names = visit.active.map((a) => describeUnit(data, a.typeId, a.unitId)).join(', ');
 
-    update((prev) => ({
-      types: prev.types.map((t) =>
-        t.id !== allocation.typeId
-          ? t
-          : { ...t, units: t.units.map((u) => (u.id !== allocation.unitId ? u : { ...u, status: 'free' })) }
-      ),
-      allocations: prev.allocations.filter((a) => a.id !== allocationId)
-    }));
+    update((prev) => applyDelete(prev, ids));
 
-    logActivity('Delete loan record', `Deleted record for ${allocation.patientName}`);
-    showToast('Record deleted.');
+    logActivity('Delete loan record', `Deleted ${names} for ${visit.primary.patientName}`);
+    showToast(n > 1 ? `${n} items deleted.` : 'Record deleted.');
   }
 
-  async function handleViewReceipt(allocationId: string) {
-    const allocation = data.allocations.find((a) => a.id === allocationId);
-    if (!allocation) return;
+  async function handleViewReceipt(visit: Visit) {
+    const allocation = receiptPrimary(visit);
     const group = allocationsInGroup(data, allocation);
     showToast('Preparing receipt…');
     try {
@@ -136,9 +139,8 @@ export default function ActiveLoansPage() {
     setPreview(null);
   }
 
-  async function handleSendReceipt(allocationId: string) {
-    const allocation = data.allocations.find((a) => a.id === allocationId);
-    if (!allocation) return;
+  async function handleSendReceipt(visit: Visit) {
+    const allocation = receiptPrimary(visit);
     const group = allocationsInGroup(data, allocation);
     const type = typeById(data, allocation.typeId);
     showToast('Preparing receipt…');
@@ -304,7 +306,7 @@ export default function ActiveLoansPage() {
         </select>
       </div>
 
-      {active.length === 0 ? (
+      {visits.length === 0 ? (
         <div className="empty">
           <div className="display">{data.allocations.some((a) => a.status === 'active') ? 'No matches' : 'Nothing out right now'}</div>
           <p>
@@ -328,68 +330,107 @@ export default function ActiveLoansPage() {
               </tr>
             </thead>
             <tbody>
-              {pager.pageItems.map((a) => {
-                const t = typeById(data, a.typeId);
-                const found = unitById(data, a.unitId);
-                const group = allocationsInGroup(data, a);
+              {pager.pageItems.map((v) => {
+                const p = v.primary;
+                const multi = v.items.length > 1;
+                const allReceived = v.items.every((a) => a.depositGiven);
+                const receiptItem = receiptPrimary(v);
+                const returnedElsewhere = allocationsInGroup(data, p).length - v.items.length;
                 return (
-                  <tr key={a.id}>
+                  <tr key={v.key}>
                     <td>
-                      <strong>{a.patientName}</strong>
-                      {group.length > 1 && (
+                      <strong>{p.patientName}</strong>
+                      {multi && (
                         <span className="pill" style={{ marginLeft: 6, background: 'rgba(31, 111, 178, 0.12)', color: 'var(--primary-deep)' }}>
-                          {group.length} items
+                          {v.items.length} items
                         </span>
                       )}
-                      {a.patientPhone && <div style={{ fontSize: 11, color: 'var(--slate)' }}>{a.patientPhone}</div>}
+                      {p.patientPhone && <div style={{ fontSize: 11, color: 'var(--slate)' }}>{p.patientPhone}</div>}
                     </td>
                     <td>
-                      {t ? t.name : '—'}{' '}
-                      <span style={{ color: 'var(--slate)', fontSize: '11.5px' }}>
-                        ({found ? found.unit.label : '—'})
-                      </span>
+                      {v.items.map((a) => {
+                        const t = typeById(data, a.typeId);
+                        const found = unitById(data, a.unitId);
+                        return (
+                          <div
+                            key={a.id}
+                            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: multi ? '2px 0' : 0 }}
+                          >
+                            <span>
+                              {t ? t.name : '—'}{' '}
+                              <span style={{ color: 'var(--slate)', fontSize: '11.5px' }}>
+                                ({found ? found.unit.label : '—'})
+                              </span>
+                              {multi && (
+                                <span className="mono" style={{ color: 'var(--slate)', fontSize: '11.5px', marginLeft: 6 }}>
+                                  ₹{a.tokenAmount}
+                                </span>
+                              )}
+                            </span>
+                            {multi && (
+                              <IconButton
+                                icon={<Undo2 />}
+                                label={`Mark ${found ? found.unit.label : 'item'} returned`}
+                                onClick={() => handleMarkReturned(v, a.id)}
+                              />
+                            )}
+                          </div>
+                        );
+                      })}
+                      {returnedElsewhere > 0 && (
+                        <div style={{ fontSize: 11, color: 'var(--slate)', marginTop: 2 }}>
+                          +{returnedElsewhere} already returned
+                        </div>
+                      )}
                     </td>
-                    <td className="mono">₹{a.tokenAmount}</td>
+                    <td className="mono">
+                      ₹{v.totalToken}
+                      {multi && <div style={{ fontSize: 10.5, color: 'var(--slate)' }}>total</div>}
+                    </td>
                     <td>
                       <button
                         type="button"
-                        className={`pill ${a.depositGiven ? 'yes' : 'no'}`}
+                        className={`pill ${allReceived ? 'yes' : 'no'}`}
                         style={{ border: 'none', cursor: 'pointer' }}
-                        onClick={() => handleToggleDeposit(a.id)}
-                        title={a.depositGiven ? `Received by ${a.depositReceivedBy || '—'} — click to undo` : 'Click to mark received'}
+                        onClick={() => handleToggleDeposit(v)}
+                        title={
+                          allReceived
+                            ? `Received by ${receiptItem.depositReceivedBy || '—'} — click to undo`
+                            : 'Click to mark received'
+                        }
                       >
-                        {a.depositGiven ? 'Received' : 'Pending'}
+                        {allReceived ? 'Received' : 'Pending'}
                       </button>
-                      {a.depositGiven && a.depositReceivedBy && (
-                        <div style={{ fontSize: 10.5, color: 'var(--slate)', marginTop: 3 }}>by {a.depositReceivedBy}</div>
+                      {allReceived && receiptItem.depositReceivedBy && (
+                        <div style={{ fontSize: 10.5, color: 'var(--slate)', marginTop: 3 }}>by {receiptItem.depositReceivedBy}</div>
                       )}
                     </td>
-                    <td>{fmtDate(a.issueDate)}</td>
-                    <td>{a.expectedReturn ? fmtDate(a.expectedReturn) : '—'}</td>
+                    <td>{fmtDate(p.issueDate)}</td>
+                    <td>{p.expectedReturn ? fmtDate(p.expectedReturn) : '—'}</td>
                     <td className="col-actions">
                       <div className="row-actions">
                         <IconButton
                           icon={<Undo2 />}
-                          label="Mark returned"
+                          label={multi ? 'Mark all returned' : 'Mark returned'}
                           variant="primary"
-                          onClick={() => handleMarkReturned(a.id)}
+                          onClick={() => handleMarkReturned(v)}
                         />
-                        {a.depositGiven && (
+                        {v.items.some((a) => a.depositGiven) && (
                           <>
-                            <IconButton icon={<Eye />} label="View receipt" onClick={() => handleViewReceipt(a.id)} />
+                            <IconButton icon={<Eye />} label="View receipt" onClick={() => handleViewReceipt(v)} />
                             <WhatsAppShareButton
                               iconOnly
-                              phone={a.patientPhone}
-                              onShare={() => handleSendReceipt(a.id)}
+                              phone={p.patientPhone}
+                              onShare={() => handleSendReceipt(v)}
                             />
                           </>
                         )}
-                        <IconLink icon={<Pencil />} label="Edit record" to={`/equipment-register/edit/${a.id}`} />
+                        <IconLink icon={<Pencil />} label="Edit record" to={`/equipment-register/edit/${p.id}`} />
                         <IconButton
                           icon={<Trash2 />}
-                          label="Delete record"
+                          label={multi ? 'Delete all items' : 'Delete record'}
                           variant="danger"
-                          onClick={() => handleDelete(a.id)}
+                          onClick={() => handleDelete(v)}
                         />
                       </div>
                     </td>
@@ -407,7 +448,7 @@ export default function ActiveLoansPage() {
             pageSize={pager.pageSize}
             onPageChange={pager.setPage}
             onPageSizeChange={pager.setPageSize}
-            label="loans"
+            label="visits"
           />
         </div>
       )}
